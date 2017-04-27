@@ -12,6 +12,11 @@ class logReg:
         self.maxEvals = maxEvals
         self.X = X
         self.y = y
+        self.alpha = 1
+        
+        n, d = self.X.shape
+        self.w = np.zeros(d)        
+        utils.check_gradient(self, self.X, self.y)
 
     def funObj(self, w, X, y):
         yXw = y * X.dot(w)
@@ -27,16 +32,25 @@ class logReg:
 
     def fit(self):
 
-        n, d = self.X.shape
-
-        # Initial guess
-        self.w = np.zeros(d)
-        utils.check_gradient(self, self.X, self.y)
-        (self.w, f) = minimizers.findMin(self.funObj, self.w,
+        (self.w, self.alpha, f, _) = minimizers.findMin(self.funObj, self.w, self.alpha,
                                          self.maxEvals,
                                          self.verbose,
                                          self.X,
                                          self.y)
+
+    def oneGradientStep(self):
+
+        (self.w, self.alpha, f, optTol) = minimizers.findMin(self.funObj, self.w, self.alpha,
+                                         1,  # Max one eval
+                                         self.verbose,
+                                         self.X,
+                                         self.y)
+
+        return (self.w, f, optTol)
+
+
+    def getParameters(self):
+        return self.w
 
     def predict(self, X):
         w = self.w
@@ -105,7 +119,7 @@ class logRegL0(logReg):
     # Doing it this way avoids copy/pasting code. 
     # You can get rid of it and copy/paste
     # the code from logReg if that makes you feel more at ease.
-    def __init__(self, lammy=1.0, verbose=2, maxEvals=400):
+    def __init__(self, lammy=1.0, verbose=1, maxEvals=400):
         self.verbose = verbose
         self.lammy = lammy
         self.maxEvals = maxEvals
@@ -115,7 +129,8 @@ class logRegL0(logReg):
         w0 = np.zeros(d)
         minimize = lambda ind: minimizers.findMin(self.funObj, 
                                                   w0[ind], 
-                                                  self.maxEvals, 0, 
+                                                  self.maxEvals, 
+                                                  self.verbose, 
                                                   X[:, ind], y)
         selected = set()
         selected.add(0) # always include the bias variable 

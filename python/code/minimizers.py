@@ -3,7 +3,7 @@ import numpy as np
 from numpy.linalg import norm
 
 
-def findMin(funObj, w, maxEvals, verbose, *args):
+def findMin(funObj, w, init_alpha, maxEvals, verbose, *args):
     """
     Uses gradient descent to optimize the objective function
     
@@ -17,8 +17,9 @@ def findMin(funObj, w, maxEvals, verbose, *args):
     # Evaluate the initial function value and gradient
     f, g = funObj(w,*args)
     funEvals = 1
+    optTolSwitch = 0
 
-    alpha = 1.
+    alpha = init_alpha
     while True:
         # Line-search using quadratic interpolation to find an acceptable value of alpha
         gg = g.T.dot(g)
@@ -64,6 +65,7 @@ def findMin(funObj, w, maxEvals, verbose, *args):
         if optCond < optTol:
             if verbose:
                 print("Problem solved up to optimality tolerance %.3f" % optTol)
+                optTolSwitch = 1
             break
 
         if funEvals >= maxEvals:
@@ -71,7 +73,7 @@ def findMin(funObj, w, maxEvals, verbose, *args):
                 print("Reached maximum number of function evaluations %d" % maxEvals)
             break
 
-    return w, f
+    return w, alpha, f, optTolSwitch
 
 def findMinL1(funObj, w, L1, maxEvals, verbose, *args):
     """

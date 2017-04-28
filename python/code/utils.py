@@ -3,8 +3,10 @@ import pickle
 import os
 import sys
 import numpy as np
+import pandas as pd
 
 def load_dataset(dataset_name):
+
     # Load and standardize the data and add the bias term
     if dataset_name == "logisticData":
         data = load_pkl(os.path.join('..', "data", 'logisticData.pkl'))
@@ -35,6 +37,56 @@ def load_dataset(dataset_name):
 
         y -= 1
         yvalid -=1
+
+        return {"X":X, "y":y, 
+                "Xvalid":Xvalid, 
+                "yvalid":yvalid}
+
+    elif dataset_name == "songsLin":
+
+        songs = pd.read_csv(os.path.join('..', "data", 'YearPredictionMSD.txt'), header=None)
+        n, d = songs.shape
+
+        # Recommended by the dataset provider
+        split = 463714
+
+        X = songs.ix[0:split,1:d].as_matrix()
+        y = (songs.ix[0:split,0]).as_matrix().astype(int)
+
+        Xvalid = songs.ix[split+1:n,1:d].as_matrix()
+        yvalid = (songs.ix[split+1:n,0]).as_matrix().astype(int)
+
+        X, mu, sigma = standardize_cols(X)
+        Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
+
+        X = np.hstack([np.ones((X.shape[0], 1)), X])
+        Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
+
+        return {"X":X, "y":y, 
+                "Xvalid":Xvalid, 
+                "yvalid":yvalid}
+
+    elif dataset_name == "songs":
+
+        songs = pd.read_csv(os.path.join('..', "data", 'YearPredictionMSD.txt'), header=None)
+        n, d = songs.shape
+
+        # Recommended by the dataset provider
+        split = 463714
+
+        X = songs.ix[0:split,1:d].as_matrix()
+        y = (songs.ix[0:split,0] > 2000).as_matrix().astype(int)
+        y[np.where(y == 0)] = -1
+
+        Xvalid = songs.ix[split+1:n,1:d].as_matrix()
+        yvalid = (songs.ix[split+1:n,0] > 2000).as_matrix().astype(int)
+        yvalid[np.where(yvalid == 0)] = -1
+
+        X, mu, sigma = standardize_cols(X)
+        Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
+
+        X = np.hstack([np.ones((X.shape[0], 1)), X])
+        Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
 
         return {"X":X, "y":y, 
                 "Xvalid":Xvalid, 
@@ -83,6 +135,9 @@ def approx_fprime(x, f_func, epsilon=1e-7):
         e[n] = 0
 
     return gA
+
+def regression_error(y, yhat):
+    return 0.5 * np.sum(np.square((y - yhat)) / float(yhat.size))
 
 def classification_error(y, yhat):
     return np.sum(y!=yhat) / float(yhat.size)

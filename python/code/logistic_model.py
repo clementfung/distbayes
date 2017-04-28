@@ -16,7 +16,7 @@ class logReg:
         
         n, d = self.X.shape
         self.w = np.zeros(d)        
-        utils.check_gradient(self, self.X, self.y)
+        #utils.check_gradient(self, self.X, self.y)
 
     def funObj(self, w, X, y):
         yXw = y * X.dot(w)
@@ -60,21 +60,29 @@ class logReg:
 
 class logRegL2(logReg):
 
-    def __init__(self, lammy, verbose=1, maxEvals=100):
+    def __init__(self, X, y, lammy, verbose=1, maxEvals=100):
         self.lammy = lammy
         self.verbose = verbose
         self.maxEvals = maxEvals
 
-    def funObj(self, w, X, y):
-        yXw = y * X.dot(w)
+        self.X = X
+        self.y = y
+        self.alpha = 1
+        
+        n, d = self.X.shape
+        self.w = np.random.normal(size=d)        
+        #utils.check_gradient(self, self.X, self.y)
+
+    def funObj(self, ww, X, y):
+        yXw = y * X.dot(ww)
 
         # Calculate the function value
-        f = np.sum(np.log(1. + np.exp(-yXw))) + 0.5 * self.lammy * w.T.dot(w)
+        f = np.sum(np.log(1. + np.exp(-yXw))) + 0.5 * self.lammy * ww.T.dot(ww)
 
         # Calculate the gradient value
         res = - y / (1. + np.exp(yXw))
-        g = X.T.dot(res) + self.lammy * w
-
+        g = X.T.dot(res) + self.lammy * ww
+        
         return f, g
 
 

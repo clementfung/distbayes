@@ -14,10 +14,41 @@ class linReg:
         self.X = X
         self.y = y
         self.alpha = 1
-        
-        n, d = self.X.shape
-        self.w = np.zeros(d)        
-        #utils.check_gradient(self, self.X, self.y)
+
+        n, self.d = self.X.shape
+        self.w = np.zeros(self.d)
+
+    # Reports the direct change to w, based on the given one.
+    def privateFun(self, theta, ww):
+
+        f, g = self.funObj(ww, self.X, self.y)
+
+        alpha = 1
+        gamma = 1e-4
+        threshold = int(self.d * theta)
+
+        # Line-search using quadratic interpolation to find an acceptable value of alpha
+        gg = g.T.dot(g)
+
+        while True:
+            delta = - alpha * g
+            w_new = ww + delta
+            f_new, g_new = self.funObj(w_new, self.X, self.y)
+
+            if f_new <= f - gamma * alpha * gg:
+                break
+
+            if self.verbose > 1:
+                print("f_new: %.3f - f: %.3f - Backtracking..." % (f_new, f))
+         
+            # Update step size alpha
+            alpha = (alpha**2) * gg/(2.*(f_new - f + alpha*gg))
+
+        # Weird way to get NON top k values
+        param_filter = np.argpartition(abs(delta), -threshold)[:self.d - threshold]
+        delta[param_filter] = 0
+
+        return (delta, f_new, g_new)
 
     def funObj(self, w, X, y):
         
@@ -34,18 +65,6 @@ class linReg:
                                          self.verbose,
                                          self.X,
                                          self.y)
-
-    def oneGradientStep(self):
-
-        (self.w, self.alpha, f, optTol) = minimizers.findMin(self.funObj, self.w, self.alpha,
-                                         1,  # Max one eval
-                                         self.verbose,
-                                         self.X,
-                                         self.y)
-        return (self.w, f, optTol)
-
-    def getParameters(self):
-        return self.w
 
     def predict(self, X):
         w = self.w
@@ -64,14 +83,13 @@ class linRegL2(linReg):
         self.y = y
         self.alpha = 1
         
-        n, d = self.X.shape
-        self.w = np.zeros(d)        
-        #utils.check_gradient(self, self.X, self.y)
+        n, self.d = self.X.shape
+        self.w = np.zeros(self.d)        
 
-    def funObj(self, w, X, y):
-        
-        xwy = (X.dot(w) - y)
-        f = 0.5 * xwy.T.dot(xwy) + 0.5 * self.lammy * w.T.dot(w)
-        g = X.T.dot(xwy) + self.lammy * w
+    def funObj(self, ww, X, y):
+
+        xwy = (X.dot(ww) - y)
+        f = 0.5 * xwy.T.dot(xwy) + 0.5 * self.lammy * ww.T.dot(ww)
+        g = X.T.dot(xwy) + self.lammy * ww
 
         return f, g

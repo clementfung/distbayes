@@ -21,6 +21,7 @@ def findMin(funObj, w, init_alpha, maxEvals, verbose, *args):
 
     alpha = init_alpha
     while True:
+
         # Line-search using quadratic interpolation to find an acceptable value of alpha
         gg = g.T.dot(g)
 
@@ -41,6 +42,7 @@ def findMin(funObj, w, init_alpha, maxEvals, verbose, *args):
 
         # Print progress
         if verbose > 0:
+            print("%d - g_norm: %.3f" % (funEvals, norm(g_new)))
             print("%d - loss: %.3f" % (funEvals, f_new))
 
         # Update step-size for next iteration
@@ -52,7 +54,7 @@ def findMin(funObj, w, init_alpha, maxEvals, verbose, *args):
             alpha = 1.
 
         if verbose > 1:
-            print("alpha: %.3f" % (alpha))
+            print("alpha: %.6f" % (alpha))
 
         # Update parameters/function/gradient
         w = w_new

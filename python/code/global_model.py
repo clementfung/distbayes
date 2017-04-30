@@ -3,12 +3,13 @@ import numpy as np
 import minimizers
 import utils
 import pdb
+from numpy.linalg import norm
 
 
 class globalModel:
 
     # Logistic Regression
-    def __init__(self, verbose=1, maxEvals=100):
+    def __init__(self, verbose=1, maxEvals=400):
         self.verbose = verbose
         self.maxEvals = maxEvals
         self.models = []
@@ -18,28 +19,52 @@ class globalModel:
     def add_model(self, model):
         self.models.append(model)
 
-    def funObj(self, w, X, y):
-        yXw = y * X.dot(w)
+    def fit(self, theta, *args):
 
-        # Calculate the function value
-        f = np.sum(np.log(1. + np.exp(-yXw)))
+        print "Training global model."
 
-        # Calculate the gradient value
-        res = - y / (1. + np.exp(yXw))
-        g = X.T.dot(res)
-
-        return f, g
-
-    def fit(self, X, y):
-        n, d = X.shape
+        # Parameters of the Optimization
+        optTol = 1e-2
+        i = 0
+        n, d = self.models[0].X.shape
 
         # Initial guess
         self.w = np.zeros(d)
-        utils.check_gradient(self, X, y)
-        (self.w, f) = minimizers.findMin(self.funObj, self.w,
-                                         self.maxEvals,
-                                         self.verbose,
-                                         X, y)
+        funEvals = 1
+
+        while True:
+
+            (delta, f_new, g) = self.models[i % len(self.models)].privateFun(theta, self.w, *args)
+            funEvals += 1
+            i += 1
+
+            # Print progress
+            if self.verbose > 0:
+                print("%d - loss: %.3f" % (funEvals, f_new))
+                print("%d - g_norm: %.3f" % (funEvals, norm(g)))
+
+            # Update parameters
+            self.w = self.w + delta
+
+            # Test termination conditions
+            optCond = norm(g, float('inf'))
+
+            if optCond < optTol:
+                if self.verbose:
+                    print("Problem solved up to optimality tolerance %.3f" % optTol)
+                break
+
+            if funEvals >= self.maxEvals:
+                if self.verbose:
+                    print("Reached maximum number of function evaluations %d" % self.maxEvals)
+                break
+
+        print "Done fitting."
+        
+    def predict(self, X):
+        w = self.w
+        yhat = np.dot(X, w)
+        return yhat
 
     def predictAverage(self, X):
         n, d = X.shape

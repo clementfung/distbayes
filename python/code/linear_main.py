@@ -9,10 +9,11 @@ data = utils.load_dataset("slices")
 XBin, yBin = data['X'], data['y']
 XBinValid, yBinValid = data['Xvalid'], data['yvalid']
 
-cut1 = int(XBin.shape[0] * 0.25)
-cut2 = int(XBin.shape[0] * 0.50)
-cut3 = int(XBin.shape[0] * 0.75)
-cut4 = XBin.shape[0]
+cut1 = int(XBin.shape[0] * 0.20)
+cut2 = int(XBin.shape[0] * 0.40)
+cut3 = int(XBin.shape[0] * 0.60)
+cut4 = int(XBin.shape[0] * 0.80)
+cut5 = XBin.shape[0]
 
 cutVal = int(XBinValid.shape[0] * 0.5)
 cutVal2 = XBinValid.shape[0]
@@ -20,16 +21,17 @@ cutVal2 = XBinValid.shape[0]
 if __name__ == "__main__":
 
     ## LOCAL MODELS
-
     model1 = linear_model.linRegL2(XBin[0:cut1,:], yBin[0:cut1], verbose=0, lammy=1, maxEvals=400)
     model2 = linear_model.linRegL2(XBin[cut1+1:cut2,:], yBin[cut1+1:cut2], verbose=0, lammy=1, maxEvals=400)
     model3 = linear_model.linRegL2(XBin[cut2+1:cut3,:], yBin[cut2+1:cut3], verbose=0, lammy=1, maxEvals=400)
     model4 = linear_model.linRegL2(XBin[cut3+1:cut4,:], yBin[cut3+1:cut4], verbose=0, lammy=1, maxEvals=400)
+    model5 = linear_model.linRegL2(XBin[cut4+1:cut5,:], yBin[cut4+1:cut5], verbose=0, lammy=1, maxEvals=400)
 
     model1.fit()
     model2.fit()
     model3.fit()
-    model4.fit()    
+    model4.fit()
+    model5.fit()  
 
     print("model1 Training error %.3f" % 
         utils.regression_error(model1.predict(XBin[0:cut1,:]), yBin[0:cut1]))
@@ -39,6 +41,8 @@ if __name__ == "__main__":
         utils.regression_error(model3.predict(XBin[cut2+1:cut3,:]), yBin[cut2+1:cut3]))
     print("model4 Training error %.3f" % 
         utils.regression_error(model4.predict(XBin[cut3+1:cut4,:]), yBin[cut3+1:cut4]))
+    print("model5 Training error %.3f" % 
+        utils.regression_error(model4.predict(XBin[cut4+1:cut5,:]), yBin[cut4+1:cut5]))
 
     print("model1 Validation error %.3f" % 
         utils.regression_error(model1.predict(XBinValid), yBinValid))
@@ -48,6 +52,8 @@ if __name__ == "__main__":
         utils.regression_error(model3.predict(XBinValid), yBinValid))
     print("model4 Validation error %.3f" % 
         utils.regression_error(model4.predict(XBinValid), yBinValid))
+    print("model5 Validation error %.3f" % 
+        utils.regression_error(model4.predict(XBinValid), yBinValid))
 
     ## GLOBAL MODEL
 
@@ -56,6 +62,7 @@ if __name__ == "__main__":
     global_model.add_model(model2)
     global_model.add_model(model3)
     global_model.add_model(model4)
+    global_model.add_model(model5)
 
     global_model.fit(theta=0.1)
     print("global 0.1 Training error %.3f" % 

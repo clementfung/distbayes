@@ -98,13 +98,16 @@ def load_dataset(dataset_name):
         slices = pd.read_csv(os.path.join('..', "data", 'slice_localization_data.csv'))
         n, d = slices.shape
 
+        npslices = slices.ix[np.random.permutation(n),:].as_matrix()
+        #npslices = slices.as_matrix()
+        
         split = int(n * 0.70)
 
-        X = slices.ix[0:split, 0:d-1].as_matrix()
-        y = (slices.ix[0:split, -1]).as_matrix()
+        X = npslices[0:split, 1:d-1]
+        y = npslices[0:split, -1]
 
-        Xvalid = slices.ix[split+1:n, 0:d-1].as_matrix()
-        yvalid = (slices.ix[split+1:n, -1]).as_matrix()
+        Xvalid = npslices[(split+1):n, 1:d-1]
+        yvalid = npslices[(split+1):n, -1]
 
         X, mu, sigma = standardize_cols(X)
         Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
@@ -147,6 +150,9 @@ def check_gradient(model, X, y):
              (estimated_gradient[:5], implemented_gradient[:5]))
     else:
         print('User and numerical derivatives agree.')
+
+def exp_noise(scale=1, size=1):
+    return np.random.exponential(scale=scale, size=size)
 
 def approx_fprime(x, f_func, epsilon=1e-7):
     # Approximate the gradient using the complex step method

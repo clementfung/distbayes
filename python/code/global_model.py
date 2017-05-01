@@ -9,12 +9,13 @@ from numpy.linalg import norm
 class globalModel:
 
     # Logistic Regression
-    def __init__(self, verbose=1, maxEvals=400):
+    def __init__(self, logistic=False, verbose=1, maxEvals=400):
         self.verbose = verbose
         self.maxEvals = maxEvals
         self.models = []
         self.modelX = np.empty(0)
         self.weights = np.empty(0)
+        self.logistic = logistic
 
     def add_model(self, model):
         self.models.append(model)
@@ -60,10 +61,25 @@ class globalModel:
                 break
 
         print "Done fitting."
-        
+       
+    def selectFeatures(self, minVotes):
+
+        n, d = self.models[0].X.shape
+        votes = np.zeros(d)
+
+        for i in xrange(len(self.models)):
+            votes += (self.models[i].w == 0).astype(int)
+
+        return np.where(votes < minVotes)[0]
+
     def predict(self, X):
         w = self.w
-        yhat = np.dot(X, w)
+        
+        if self.logistic:
+            yhat = np.sign(np.dot(X, w))
+        else:
+            yhat = np.dot(X, w)
+
         return yhat
 
     def predictAverage(self, X):
@@ -76,9 +92,14 @@ class globalModel:
             yhats[i] = self.models[i].predict(X)
             yhat_total = yhat_total + yhats[i]
 
-        return yhat_total / len(self.models)
+        if self.logistic:
+            yhat = np.sign(yhat_total)
+        else:
+            yhat = yhat_total / float(len(self.models))
 
-    def fitWeightedAverage(self, X, y):
+        return yhat
+
+    def fitWeightedAverage(self, X, y, epsilon=1):
 
         n, d = X.shape
         k = len(self.models)
@@ -86,7 +107,7 @@ class globalModel:
         modelX = np.zeros(shape=(n, k))
         
         for i in xrange(k):
-            modelX[:, i] = self.models[i].predict(X)
+            modelX[:, i] = self.models[i].privatePredict(X, epsilon)
 
         A = np.dot(modelX.T, modelX)
         B = np.dot(modelX.T, y)
@@ -94,7 +115,7 @@ class globalModel:
         self.modelX = modelX
         self.weights = np.linalg.solve(A, B)
 
-    def predictWeightedAverage(self, X, Logistic=False):
+    def predictWeightedAverage(self, X):
         
         n, d = X.shape
         k = len(self.models)
@@ -104,7 +125,7 @@ class globalModel:
         for i in xrange(k):
             modelX[:, i] = self.models[i].predict(X)
 
-        if Logistic:
+        if self.logistic:
             yhat = np.sign(np.dot(modelX, self.weights.T))
         else:
             yhat = np.dot(modelX, self.weights.T)

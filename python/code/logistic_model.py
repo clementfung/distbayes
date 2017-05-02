@@ -150,10 +150,10 @@ class logRegL1(logReg):
 
     def fit(self):
 
-        n, d = self.X.shape
+        nn, dd = self.X.shape
 
         # Initial guess
-        self.w = np.zeros(d)
+        self.w = np.zeros(dd)
         (self.w, f) = minimizers.findMinL1(self.funObj,
                                         self.w,
                                         self.lammy,

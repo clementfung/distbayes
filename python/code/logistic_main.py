@@ -91,7 +91,7 @@ if __name__ == "__main__":
     ### RAW AVERAGE
     print("global-averaging Validation error %.3f" % 
         utils.classification_error(global_model.predictAverage(
-            XBinValid), yBinValid))
+            XBinValid, epsilon=0.1), yBinValid))
 
     ### WEIGHTED AVERAGE on public labelled
     global_model.fitWeightedAverage(XBinValid[0:cutVal,:], yBinValid[0:cutVal], epsilon=0.1)
@@ -112,7 +112,7 @@ if __name__ == "__main__":
             XBinValid[cutVal+1:cutVal2,:]), yBinValid[cutVal+1:cutVal2]))
 
     ### KNOWLEDGE TRANSFER on public unlabelled
-    ypub = global_model.predictAverage(XBinValid[0:cutVal,:])
+    ypub = global_model.predictAverage(XBinValid[0:cutVal,:], epsilon=0.1)
     global_kt = logistic_model.logRegL2(XBinValid[0:cutVal,:], ypub, lammy=1, verbose=0, maxEvals=400)
     global_kt.fit()
     print("global-knowledge-transfer Validation error %.3f" % 

@@ -82,14 +82,14 @@ class globalModel:
 
         return yhat
 
-    def predictAverage(self, X):
+    def predictAverage(self, X, epsilon=1):
         n, d = X.shape
         yhats = {}
         yhat_total = np.zeros(n)
 
         # Aggregation function
         for i in xrange(len(self.models)):
-            yhats[i] = self.models[i].predict(X)
+            yhats[i] = self.models[i].privatePredict(X, epsilon)
             yhat_total = yhat_total + yhats[i]
 
         if self.logistic:

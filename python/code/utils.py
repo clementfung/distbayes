@@ -25,24 +25,6 @@ def load_dataset(dataset_name):
                 "Xvalid":Xvalid, 
                 "yvalid":yvalid}
 
-    elif dataset_name == "multiData":
-        data = load_pkl(os.path.join('..', "data", 'multiData.pkl'))
-        X, y = data['X'], data['y']
-        Xvalid, yvalid = data['Xvalidate'], data['yvalidate']
-    
-        X, mu, sigma = standardize_cols(X)
-        Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
-
-        X = np.hstack([np.ones((X.shape[0], 1)), X])
-        Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
-
-        y -= 1
-        yvalid -=1
-
-        return {"X":X, "y":y, 
-                "Xvalid":Xvalid, 
-                "yvalid":yvalid}
-
     elif dataset_name == "songsLin":
 
         songs = pd.read_csv(os.path.join('..', "data", 'YearPredictionMSD.txt'), header=None)
@@ -118,6 +100,33 @@ def load_dataset(dataset_name):
         return {"X":X, "y":y, 
                 "Xvalid":Xvalid, 
                 "yvalid":yvalid}
+
+    elif dataset_name == "arcene":
+
+        arc_train = pd.read_csv(os.path.join('..', "data", "arcene", 'arcene_train.data'), sep=" ")
+        arc_y = pd.read_csv(os.path.join('..', "data", "arcene", 'arcene_train.labels'))
+        nn, dd = arc_train.shape
+
+        X = arc_train.as_matrix()[:,0:dd-1]
+        y = arc_y.as_matrix()
+        
+        arc_val = pd.read_csv(os.path.join('..', "data", "arcene", 'arcene_valid.data'), sep=" ")
+        arc_valy = pd.read_csv(os.path.join('..', "data", "arcene", 'arcene_valid.labels'))
+        nn, dd = arc_train.shape
+
+        Xvalid = arc_val.as_matrix()[:,0:dd-1]
+        yvalid = arc_valy.as_matrix()
+
+        X, mu, sigma = standardize_cols(X)
+        Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
+
+        X = np.hstack([np.ones((X.shape[0], 1)), X])
+        Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
+
+        return {"X":X, "y":y, 
+                "Xvalid":Xvalid, 
+                "yvalid":yvalid}
+
 
 
 def standardize_cols(X, mu=None, sigma=None):

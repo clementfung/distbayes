@@ -56,7 +56,6 @@ if __name__ == "__main__":
         utils.regression_error(model4.predict(XBinValid), yBinValid))
 
     ## GLOBAL MODEL
-
     global_model = global_model.globalModel(verbose=0, maxEvals=400)
     global_model.add_model(model1)
     global_model.add_model(model2)
@@ -89,15 +88,15 @@ if __name__ == "__main__":
         utils.regression_error(global_model.predict(XBinValid), yBinValid))
 
     print("global average Validation error %.3f" % 
-        utils.regression_error(global_model.predictAverage(XBinValid), yBinValid))
+        utils.regression_error(global_model.predictAverage(
+            XBinValid, epsilon=0.1), yBinValid))
 
-    global_model.fitWeightedAverage(XBinValid[0:cutVal,:], yBinValid[0:cutVal])
+    global_model.fitWeightedAverage(XBinValid[0:cutVal,:], yBinValid[0:cutVal], epsilon=0.1)
     print("global-weighted Validation error %.3f" % 
         utils.regression_error(global_model.predictWeightedAverage(
-            XBinValid[cutVal+1:cutVal2,:], Logistic=False), yBinValid[cutVal+1:cutVal2]))
+            XBinValid[cutVal+1:cutVal2,:]), yBinValid[cutVal+1:cutVal2]))
 
     ## FULL MODEL
-
     full = linear_model.linRegL2(XBin, yBin, verbose=0, lammy=1, maxEvals=400)
     full.fit()
 

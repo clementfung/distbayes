@@ -71,6 +71,11 @@ class linReg:
         yhat = np.dot(X, w)
         return yhat
 
+    def privatePredict(self, X, scale):
+        _, d = X.shape
+        w = self.w + utils.exp_noise(scale=scale, size=d)
+        yhat = np.dot(X, w)
+        return yhat
 
 class linRegL2(linReg):
 

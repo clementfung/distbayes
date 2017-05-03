@@ -94,13 +94,14 @@ def findMinL1(funObj, ww, L1, maxEvals, verbose, *args):
     funEvals = 1
 
     alpha = 1.
-    proxL1 = lambda w, alpha: np.sign(w) * np.maximum(abs(ww)- L1*alpha,0)
-    L1Term = lambda w: L1 * np.sum(np.abs(ww))
+    proxL1 = lambda ww, alpha: np.sign(ww) * np.maximum(abs(ww)- L1*alpha,0)
+    L1Term = lambda ww: L1 * np.sum(np.abs(ww))
     
     while True:
         gtd = None
         # Start line search to determine alpha      
         while True:
+
             w_new = ww - alpha * g
             w_new = proxL1(w_new, alpha)
 

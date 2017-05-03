@@ -8,7 +8,7 @@ import pdb
 class linReg:
 
     # Q3 - One-vs-all Least Squares for multi-class classification
-    def __init__(self, X, y, verbose=1, maxEvals=100):
+    def __init__(self, X, y, verbose=0, maxEvals=100):
         self.verbose = verbose
         self.maxEvals = maxEvals
         self.X = X
@@ -79,7 +79,7 @@ class linReg:
 
 class linRegL2(linReg):
 
-    def __init__(self, X, y, lammy, verbose=1, maxEvals=100):
+    def __init__(self, X, y, lammy, verbose=0, maxEvals=100):
         self.lammy = lammy
         self.verbose = verbose
         self.maxEvals = maxEvals

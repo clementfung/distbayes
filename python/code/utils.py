@@ -15,6 +15,12 @@ def load_dataset(dataset_name):
         X, y = data['X'], data['y']
         Xvalid, yvalid = data['Xvalidate'], data['yvalidate']
     
+        n, _ = X.shape
+
+        randseed = np.random.permutation(n)
+        X = X[randseed,:]
+        y = y[randseed]
+
         X, mu, sigma = standardize_cols(X)
         Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
 
@@ -81,8 +87,6 @@ def load_dataset(dataset_name):
         n, d = slices.shape
 
         npslices = slices.ix[np.random.permutation(n),:].as_matrix()
-        #npslices = slices.as_matrix()
-        
         split = int(n * 0.70)
 
         X = npslices[0:split, 1:d-1]
@@ -109,6 +113,7 @@ def load_dataset(dataset_name):
 
         X = arc_train.as_matrix()[:,0:dd-1]
         y = arc_y.as_matrix()
+        y = np.reshape(y, (nn,))
         
         arc_val = pd.read_csv(os.path.join('..', "data", "arcene", 'arcene_valid.data'), sep=" ")
         arc_valy = pd.read_csv(os.path.join('..', "data", "arcene", 'arcene_valid.labels'))
@@ -116,6 +121,7 @@ def load_dataset(dataset_name):
 
         Xvalid = arc_val.as_matrix()[:,0:dd-1]
         yvalid = arc_valy.as_matrix()
+        yvalid = np.reshape(yvalid, (nn,))
 
         X, mu, sigma = standardize_cols(X)
         Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
@@ -127,6 +133,32 @@ def load_dataset(dataset_name):
                 "Xvalid":Xvalid, 
                 "yvalid":yvalid}
 
+    elif dataset_name == "magic":
+
+        magic = pd.read_csv(os.path.join('..', "data", 'magic04.data'))
+        nn, dd = magic.shape
+
+        y = magic.ix[:,dd-1].as_matrix()
+        y[np.where(y == 'g')] = 1
+        y[np.where(y == 'h')] = -1
+
+        npmagic = magic.ix[np.random.permutation(nn),:].as_matrix().astype(int)
+        split = int(nn * 0.70)
+
+        X = npmagic[0:split-1, 0:dd-2]
+        y = npmagic[0:split-1, dd-1]
+        Xvalid = npmagic[split:nn-1, 0:dd-2]
+        yvalid = npmagic[split:nn-1, dd-1]
+
+        X, mu, sigma = standardize_cols(X)
+        Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
+
+        X = np.hstack([np.ones((X.shape[0], 1)), X])
+        Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
+
+        return {"X":X, "y":y, 
+                "Xvalid":Xvalid, 
+                "yvalid":yvalid}
 
 
 def standardize_cols(X, mu=None, sigma=None):

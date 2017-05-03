@@ -2,7 +2,6 @@ from __future__ import division
 import utils
 import logistic_model
 import global_model
-import numpy as np
 import pdb
 
 # Load Binary and Multi -class data
@@ -76,11 +75,14 @@ if __name__ == "__main__":
         selected = global_model.selectFeatures(minVotes=k)    
         print("Global method selected %.0f" % len(selected))
 
+        if len(selected) == 0:
+            continue
+
         # Train a model with the given features, as if it had all the data
         global_mock_model.fitSelected(selected)
-        print("Global L0", k, "Validation error %.3f" % 
+        print("Global L0, removing all with", k, "Validation error %.3f" % 
             utils.classification_error(global_mock_model.predict(XBinValid), yBinValid))
-        print("Global L0", k, "method selected %.0f" % sum(global_mock_model.w != 0))
+        print("Global L0, removing all with", k, "method selected %.0f" % sum(global_mock_model.w != 0))
 
     ## FULL MODEL
     full = logistic_model.logRegL1(XBin, yBin, verbose=0, lammy=1, maxEvals=400)
@@ -100,5 +102,3 @@ if __name__ == "__main__":
     print("Full L0 Validation error %.3f" % 
         utils.classification_error(L0model.predict(XBinValid), yBinValid))
     print("Full L0 method selected %.0f" % sum(L0model.w != 0))
-
-    pdb.set_trace()

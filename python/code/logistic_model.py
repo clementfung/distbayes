@@ -70,6 +70,8 @@ class logReg:
                                          self.X,
                                          self.y)
 
+        print("Training error: %.3f" % utils.classification_error(self.predict(self.X), self.y))
+
     def oneGradientStep(self):
 
         (self.w, self.alpha, f, optTol) = minimizers.findMin(self.funObj, self.w, self.alpha,
@@ -107,16 +109,16 @@ class logRegL2(logReg):
 
         n, self.d = self.X.shape
         self.w = np.zeros(self.d)
-        utils.check_gradient(self, self.X, self.y)
+        #utils.check_gradient(self, self.X, self.y)
 
     def funObj(self, ww, X, y):
         yXw = y * X.dot(ww)
 
         # Calculate the function value
-        f = np.sum(np.log(1. + np.exp(-yXw))) + 0.5 * self.lammy * ww.T.dot(ww)
+        f = np.sum(np.logaddexp(0, -yXw)) + 0.5 * self.lammy * ww.T.dot(ww)
 
         # Calculate the gradient value
-        res = - y / (1. + np.exp(yXw))
+        res = - y / np.exp(np.logaddexp(0, yXw))
         g = X.T.dot(res) + self.lammy * ww
 
         return f, g
@@ -140,10 +142,10 @@ class logRegL1(logReg):
         yXw = y * X.dot(w)
 
         # Calculate the function value
-        f = np.sum(np.log(1. + np.exp(-yXw)))
+        f = np.sum(np.logaddexp(0, -yXw))
 
         # Calculate the gradient value
-        res = - y / (1. + np.exp(yXw))
+        res = - y / np.exp(np.logaddexp(0, yXw))
         g = X.T.dot(res)
 
         return f, g
@@ -160,7 +162,6 @@ class logRegL1(logReg):
                                         self.maxEvals,
                                         self.verbose,
                                         self.X, self.y)
-
 
 # L0 Regularized Logistic Regression
 class logRegL0(logReg):

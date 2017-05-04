@@ -9,10 +9,12 @@ ind = np.arange(5)
 width = 0.20
 
 # AVERAGING
+
 e1 = (36.008,63.093,36.848,61.745,34.229)
 e01 = (36.008,34.540,34.723,34.973,34.229)
 e001 = (36.008,34.246,34.708,34.662,34.229)
 '''
+
 e1 = (0.209,0.217,0.206,0.219,0.208)
 e01 = (0.209,0.209,0.206,0.208,0.208)
 e001 = (0.209,0.208,0.208,0.208,0.208)
@@ -28,7 +30,8 @@ ax.set_title("Squared Error for Various Aggregation Methods")
 
 ax.set_xticks(ind + width)
 ax.set_xticklabels(('Local', 'Average', 'Feature', 'K-Transfer', 'Full'))
-ax.legend((rects1[0], rects2[0], rects3[0]), ('e=0.1', 'e=0.01', 'e=0.001'))
+#ax.set_ylim(ymin=0.18)
+ax.legend((rects1[0], rects2[0], rects3[0]), (r'$\beta$=0.1', r'$\beta$=0.01', r'$\beta$=0.001'))
 
 plt.grid(True, which='both', axis="y", linestyle=":", color="gray")
 plt.show()

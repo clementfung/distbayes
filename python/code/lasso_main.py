@@ -5,7 +5,7 @@ import global_model
 import pdb
 
 # Load Binary and Multi -class data
-data = utils.load_dataset("arcene")
+data = utils.load_dataset("logisticData")
 XBin, yBin = data['X'], data['y']
 XBinValid, yBinValid = data['Xvalid'], data['yvalid']
 

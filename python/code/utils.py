@@ -31,56 +31,6 @@ def load_dataset(dataset_name):
                 "Xvalid":Xvalid, 
                 "yvalid":yvalid}
 
-    elif dataset_name == "songsLin":
-
-        songs = pd.read_csv(os.path.join('..', "data", 'YearPredictionMSD.txt'), header=None)
-        n, d = songs.shape
-
-        # Recommended by the dataset provider
-        split = 463714
-
-        X = songs.ix[0:split,1:d].as_matrix()
-        y = (songs.ix[0:split,0]).as_matrix()
-
-        Xvalid = songs.ix[split+1:n,1:d].as_matrix()
-        yvalid = (songs.ix[split+1:n,0]).as_matrix()
-
-        X, mu, sigma = standardize_cols(X)
-        Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
-
-        X = np.hstack([np.ones((X.shape[0], 1)), X])
-        Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
-
-        return {"X":X, "y":y, 
-                "Xvalid":Xvalid, 
-                "yvalid":yvalid}
-
-    elif dataset_name == "songs":
-
-        songs = pd.read_csv(os.path.join('..', "data", 'YearPredictionMSD.txt'), header=None)
-        n, d = songs.shape
-
-        # Recommended by the dataset provider
-        split = 463714
-
-        X = songs.ix[0:split,1:d].as_matrix()
-        y = (songs.ix[0:split,0] > 2000).as_matrix().astype(int)
-        y[np.where(y == 0)] = -1
-
-        Xvalid = songs.ix[split+1:n,1:d].as_matrix()
-        yvalid = (songs.ix[split+1:n,0] > 2000).as_matrix().astype(int)
-        yvalid[np.where(yvalid == 0)] = -1
-
-        X, mu, sigma = standardize_cols(X)
-        Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
-
-        X = np.hstack([np.ones((X.shape[0], 1)), X])
-        Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
-
-        return {"X":X, "y":y, 
-                "Xvalid":Xvalid, 
-                "yvalid":yvalid}
-
     elif dataset_name == "slices":
 
         slices = pd.read_csv(os.path.join('..', "data", 'slice_localization_data.csv'))
@@ -94,34 +44,6 @@ def load_dataset(dataset_name):
 
         Xvalid = npslices[(split+1):n, 1:d-1]
         yvalid = npslices[(split+1):n, -1]
-
-        X, mu, sigma = standardize_cols(X)
-        Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
-
-        X = np.hstack([np.ones((X.shape[0], 1)), X])
-        Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
-
-        return {"X":X, "y":y, 
-                "Xvalid":Xvalid, 
-                "yvalid":yvalid}
-
-    elif dataset_name == "arcene":
-
-        arc_train = pd.read_csv(os.path.join('..', "data", "arcene", 'arcene_train.data'), sep=" ")
-        arc_y = pd.read_csv(os.path.join('..', "data", "arcene", 'arcene_train.labels'))
-        nn, dd = arc_train.shape
-
-        X = arc_train.as_matrix()[:,0:dd-1]
-        y = arc_y.as_matrix()
-        y = np.reshape(y, (nn,))
-        
-        arc_val = pd.read_csv(os.path.join('..', "data", "arcene", 'arcene_valid.data'), sep=" ")
-        arc_valy = pd.read_csv(os.path.join('..', "data", "arcene", 'arcene_valid.labels'))
-        nn, dd = arc_train.shape
-
-        Xvalid = arc_val.as_matrix()[:,0:dd-1]
-        yvalid = arc_valy.as_matrix()
-        yvalid = np.reshape(yvalid, (nn,))
 
         X, mu, sigma = standardize_cols(X)
         Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)

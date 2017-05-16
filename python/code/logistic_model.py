@@ -90,11 +90,24 @@ class logReg:
         yhat = np.dot(X, w)
         return np.sign(yhat)
 
+    '''
+    Original model
     def privatePredict(self, X, scale):
         _, d = X.shape
         w = self.w + utils.exp_noise(scale=scale, size=d)
         yhat = np.dot(X, w)
         return np.sign(yhat)
+    '''
+
+    def privatePredict(self, X, epsilon):
+        n, _ = X.shape
+        w = self.w
+        yhat = np.dot(X, w)
+
+        # TODO: Estimate the L1 Sensitivity
+        sens = np.max(yhat) - np.min(yhat)
+        
+        return np.sign(yhat + utils.lap_noise(loc=0, scale=sens / epsilon, size=n))
 
 class logRegL2(logReg):
 

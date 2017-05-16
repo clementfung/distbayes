@@ -48,6 +48,9 @@ def load_dataset(dataset_name):
         X, mu, sigma = standardize_cols(X)
         Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
 
+        #y, mu_y, sigma_y = standardize_outputs(y)
+        #yvalid, _, _ = standardize_outputs(yvalid, mu_y, sigma_y)
+
         X = np.hstack([np.ones((X.shape[0], 1)), X])
         Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
 
@@ -96,6 +99,19 @@ def standardize_cols(X, mu=None, sigma=None):
 
     return (X - mu) / sigma, mu, sigma
     
+def standardize_outputs(y, mu=None, sigma=None):
+
+    if mu is None: 
+        mu = np.mean(y)
+
+    if sigma is None:
+        sigma = np.std(y)
+        if sigma < 1e-8:
+            sigma = 1.            
+
+    return (y - mu) / sigma, mu, sigma
+
+
 def check_gradient(model, X, y):
     # This checks that the gradient implementation is correct
     w = np.random.rand(model.w.size)
@@ -113,6 +129,9 @@ def check_gradient(model, X, y):
              (estimated_gradient[:5], implemented_gradient[:5]))
     else:
         print('User and numerical derivatives agree.')
+
+def lap_noise(loc=0, scale=1, size=1):
+    return np.random.laplace(loc=loc, scale=scale, size=size)
 
 def exp_noise(scale=1, size=1):
     return np.random.exponential(scale=scale, size=size)

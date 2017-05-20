@@ -3,6 +3,7 @@ import pickle
 import os
 import sys
 import numpy as np
+from numpy.linalg import norm
 import pandas as pd
 import pdb
 
@@ -54,6 +55,9 @@ def load_dataset(dataset_name):
         X = np.hstack([np.ones((X.shape[0], 1)), X])
         Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
 
+        X = normalize_rows(X)
+        Xvalid = normalize_rows(Xvalid)
+
         return {"X":X, "y":y, 
                 "Xvalid":Xvalid, 
                 "yvalid":yvalid}
@@ -81,10 +85,22 @@ def load_dataset(dataset_name):
         X = np.hstack([np.ones((X.shape[0], 1)), X])
         Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
 
+        X = normalize_rows(X)
+        Xvalid = normalize_rows(Xvalid)
+
         return {"X":X, "y":y, 
                 "Xvalid":Xvalid, 
                 "yvalid":yvalid}
 
+def normalize_rows(X):
+
+    # Sets all rows to have L2 norm of 1. Needed for diff priv
+    nn, dd = X.shape
+    
+    for i in xrange(nn):
+        X[i,] = X[i,] / norm(X[i,], 2)
+
+    return X
 
 def standardize_cols(X, mu=None, sigma=None):
     # Standardize each column with mean 0 and variance 1

@@ -72,14 +72,14 @@ class linReg:
         return yhat
 
     def privatePredict(self, X, epsilon):
-        n, _ = X.shape
+        nn, dd = X.shape
         w = self.w
         yhat = np.dot(X, w)
 
-        # TODO: Estimate the L1 Sensitivity
-        sens = np.max(yhat) - np.min(yhat)
-        
-        y_private = yhat + utils.lap_noise(loc=0, scale=sens / epsilon, size=n)
+        # TODO: Estimate the L1 Sensitivity in a better way
+        sens = (dd * dd + 2 * dd + 1) * 2
+
+        y_private = yhat + utils.lap_noise(loc=0, scale=sens / epsilon, size=nn)
         return y_private
 
 class linRegL2(linReg):

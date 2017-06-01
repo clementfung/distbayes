@@ -20,7 +20,7 @@ class globalModel:
     def add_model(self, model):
         self.models.append(model)
 
-    def fit(self, theta, *args):
+    def fit(self, theta, batch_size=0, *args):
 
         print "Training global model."
 
@@ -35,7 +35,7 @@ class globalModel:
 
         while True:
 
-            (delta, f_new, g) = self.models[i % len(self.models)].privateFun(theta, self.w, *args)
+            (delta, f_new, g) = self.models[i % len(self.models)].privateFun(theta, self.w, batch_size, *args)
             funEvals += 1
             i += 1
 

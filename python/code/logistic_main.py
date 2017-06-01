@@ -55,72 +55,104 @@ if __name__ == "__main__":
         utils.classification_error(model5.predict(XBinValid), yBinValid))
 
     ### GLOBAL MODEL
-    global_model = global_model.globalModel(logistic=True, verbose=0, maxEvals=400)
-    global_model.add_model(model1)
-    global_model.add_model(model2)
-    global_model.add_model(model3)
-    global_model.add_model(model4)
-    global_model.add_model(model5)
+    global_model_gd = global_model.globalModel(logistic=True, verbose=0, maxEvals=400)
+    global_model_gd.add_model(model1)
+    global_model_gd.add_model(model2)
+    global_model_gd.add_model(model3)
+    global_model_gd.add_model(model4)
+    global_model_gd.add_model(model5)
 
-    global_model.fit(theta=0.1)
+    global_model_gd.fit(theta=0.1)
     print("global 0.1 Training error %.3f" % 
-        utils.classification_error(global_model.predict(XBin), yBin))
+        utils.classification_error(global_model_gd.predict(XBin), yBin))
     print("global 0.1 Validation error %.3f" % 
-        utils.classification_error(global_model.predict(XBinValid), yBinValid))
+        utils.classification_error(global_model_gd.predict(XBinValid), yBinValid))
 
-    global_model.fit(theta=0.25)
+    global_model_gd.fit(theta=0.25)
     print("global 0.25 Training error %.3f" % 
-        utils.classification_error(global_model.predict(XBin), yBin))
+        utils.classification_error(global_model_gd.predict(XBin), yBin))
     print("global 0.25 Validation error %.3f" % 
-        utils.classification_error(global_model.predict(XBinValid), yBinValid))
+        utils.classification_error(global_model_gd.predict(XBinValid), yBinValid))
 
-    global_model.fit(theta=0.5)
+    global_model_gd.fit(theta=0.5)
     print("global 0.5 Training error %.3f" % 
-        utils.classification_error(global_model.predict(XBin), yBin))
+        utils.classification_error(global_model_gd.predict(XBin), yBin))
     print("global 0.5 Validation error %.3f" % 
-        utils.classification_error(global_model.predict(XBinValid), yBinValid))
+        utils.classification_error(global_model_gd.predict(XBinValid), yBinValid))
 
-    global_model.fit(theta=1)
+    global_model_gd.fit(theta=1)
     print("global 1 Training error %.3f" % 
-        utils.classification_error(global_model.predict(XBin), yBin))
+        utils.classification_error(global_model_gd.predict(XBin), yBin))
     print("global 1 Validation error %.3f" % 
-        utils.classification_error(global_model.predict(XBinValid), yBinValid))
+        utils.classification_error(global_model_gd.predict(XBinValid), yBinValid))
 
-    ### OTHER HEURISTICS: 
+    ### GLOBAL MODEL
+    global_model_sgd = global_model.globalModel(logistic=True, verbose=0, maxEvals=4000)
+    global_model_sgd.add_model(model1)
+    global_model_sgd.add_model(model2)
+    global_model_sgd.add_model(model3)
+    global_model_sgd.add_model(model4)
+    global_model_sgd.add_model(model5)
+    training_batch_size = 50
+
+    print("STOCHASTIC BS is %.0f" % training_batch_size)
+    global_model_sgd.fit(theta=0.1, batch_size=training_batch_size)
+    print("global 0.1 Training error %.3f" % 
+        utils.classification_error(global_model_sgd.predict(XBin), yBin))
+    print("global 0.1 Validation error %.3f" % 
+        utils.classification_error(global_model_sgd.predict(XBinValid), yBinValid))
+
+    global_model_sgd.fit(theta=0.25, batch_size=training_batch_size)
+    print("global 0.25 Training error %.3f" % 
+        utils.classification_error(global_model_sgd.predict(XBin), yBin))
+    print("global 0.25 Validation error %.3f" % 
+        utils.classification_error(global_model_sgd.predict(XBinValid), yBinValid))
+
+    global_model_sgd.fit(theta=0.5, batch_size=training_batch_size)
+    print("global 0.5 Training error %.3f" % 
+        utils.classification_error(global_model_sgd.predict(XBin), yBin))
+    print("global 0.5 Validation error %.3f" % 
+        utils.classification_error(global_model_sgd.predict(XBinValid), yBinValid))
+
+    global_model_sgd.fit(theta=1, batch_size=training_batch_size)
+    print("global 1 Training error %.3f" % 
+        utils.classification_error(global_model_sgd.predict(XBin), yBin))
+    print("global 1 Validation error %.3f" % 
+        utils.classification_error(global_model_sgd.predict(XBinValid), yBinValid))
 
     ### RAW AVERAGE
     print("global-averaging e=0.1 Validation error %.3f" % 
-        utils.classification_error(global_model.predictAverage(
+        utils.classification_error(global_model_gd.predictAverage(
             XBinValid, epsilon=0.1), yBinValid))
 
     print("global-averaging e=0.01 Validation error %.3f" % 
-        utils.classification_error(global_model.predictAverage(
+        utils.classification_error(global_model_gd.predictAverage(
             XBinValid, epsilon=0.01), yBinValid))
 
     print("global-averaging e=0.001 Validation error %.3f" % 
-        utils.classification_error(global_model.predictAverage(
+        utils.classification_error(global_model_gd.predictAverage(
             XBinValid, epsilon=0.001), yBinValid))
 
     ### WEIGHTED AVERAGE on public labelled
-    global_model.fitWeightedAverage(XBinValid[0:cutVal,:], yBinValid[0:cutVal], epsilon=0.1)
+    global_model_gd.fitWeightedAverage(XBinValid[0:cutVal,:], yBinValid[0:cutVal], epsilon=0.1)
     print("global-weighted e=0.1 Validation error %.3f" % 
-        utils.classification_error(global_model.predictWeightedAverage(
+        utils.classification_error(global_model_gd.predictWeightedAverage(
             XBinValid[cutVal+1:cutVal2,:]), yBinValid[cutVal+1:cutVal2]))
 
     ### WEIGHTED AVERAGE on public labelled
-    global_model.fitWeightedAverage(XBinValid[0:cutVal,:], yBinValid[0:cutVal], epsilon=0.01)
+    global_model_gd.fitWeightedAverage(XBinValid[0:cutVal,:], yBinValid[0:cutVal], epsilon=0.01)
     print("global-weighted e=0.01 Validation error %.3f" % 
-        utils.classification_error(global_model.predictWeightedAverage(
+        utils.classification_error(global_model_gd.predictWeightedAverage(
             XBinValid[cutVal+1:cutVal2,:]), yBinValid[cutVal+1:cutVal2]))
 
     ### WEIGHTED AVERAGE on public labelled
-    global_model.fitWeightedAverage(XBinValid[0:cutVal,:], yBinValid[0:cutVal], epsilon=0.001)
+    global_model_gd.fitWeightedAverage(XBinValid[0:cutVal,:], yBinValid[0:cutVal], epsilon=0.001)
     print("global-weighted e=0.001 Validation error %.3f" % 
-        utils.classification_error(global_model.predictWeightedAverage(
+        utils.classification_error(global_model_gd.predictWeightedAverage(
             XBinValid[cutVal+1:cutVal2,:]), yBinValid[cutVal+1:cutVal2]))
 
     ### KNOWLEDGE TRANSFER on public unlabelled
-    ypub = global_model.predictAverage(XBinValid[0:cutVal,:], epsilon=0.1)
+    ypub = global_model_gd.predictAverage(XBinValid[0:cutVal,:], epsilon=0.1)
     global_kt = logistic_model.logRegL2(XBinValid[0:cutVal,:], ypub, lammy=0.1, verbose=0, maxEvals=400)
     global_kt.fit()
     print("global-knowledge-transfer e=0.1 Validation error %.3f" % 
@@ -128,7 +160,7 @@ if __name__ == "__main__":
             XBinValid[cutVal+1:cutVal2,:]), yBinValid[cutVal+1:cutVal2]))
 
         ### KNOWLEDGE TRANSFER on public unlabelled
-    ypub = global_model.predictAverage(XBinValid[0:cutVal,:], epsilon=0.01)
+    ypub = global_model_gd.predictAverage(XBinValid[0:cutVal,:], epsilon=0.01)
     global_kt = logistic_model.logRegL2(XBinValid[0:cutVal,:], ypub, lammy=0.1, verbose=0, maxEvals=400)
     global_kt.fit()
     print("global-knowledge-transfer e=0.01 Validation error %.3f" % 
@@ -136,7 +168,7 @@ if __name__ == "__main__":
             XBinValid[cutVal+1:cutVal2,:]), yBinValid[cutVal+1:cutVal2]))
 
         ### KNOWLEDGE TRANSFER on public unlabelled
-    ypub = global_model.predictAverage(XBinValid[0:cutVal,:], epsilon=0.001)
+    ypub = global_model_gd.predictAverage(XBinValid[0:cutVal,:], epsilon=0.001)
     global_kt = logistic_model.logRegL2(XBinValid[0:cutVal,:], ypub, lammy=0.1, verbose=0, maxEvals=400)
     global_kt.fit()
     print("global-knowledge-transfer e=0.001 Validation error %.3f" % 

@@ -19,9 +19,16 @@ class logReg:
         #utils.check_gradient(self, self.X, self.y)
 
     # Reports the direct change to w, based on the given one.
-    def privateFun(self, theta, ww):
+    # Batch size could be 1 for SGD, or 0 for full gradient.
+    def privateFun(self, theta, ww, batch_size=0):
 
-        f, g = self.funObj(ww, self.X, self.y)
+        nn, dd = self.X.shape
+
+        if batch_size > 0 and batch_size < nn:
+            idx = np.random.choice(nn, batch_size, replace=False)
+            f, g = self.funObj(ww, self.X[idx,:], self.y[idx])
+        else:
+            f, g = self.funObj(ww, self.X, self.y)
 
         alpha = 1
         gamma = 1e-4
@@ -33,7 +40,14 @@ class logReg:
         while True:
             delta = - alpha * g
             w_new = ww + delta
-            f_new, g_new = self.funObj(w_new, self.X, self.y)
+
+            if batch_size > 0 and batch_size < nn:
+                idx = np.random.choice(nn, batch_size, replace=False)
+                f_new, g_new = self.funObj(w_new, self.X[idx,:], self.y[idx])
+            else:
+                f_new, g_new = self.funObj(w_new, self.X, self.y)
+
+            #f_new, g_new = self.funObj(w_new, self.X, self.y)
 
             if f_new <= f - gamma * alpha * gg:
                 break

@@ -47,7 +47,7 @@ def findMin(funObj, w, init_alpha, maxEvals, verbose, *args):
 
         # Update step-size for next iteration
         y = g_new - g
-        alpha = -alpha*np.dot(y.T,g) / np.dot(y.T,y)
+        alpha = -alpha * np.dot(y.T, g) / np.dot(y.T, y)
        
         # Safety guards
         if np.isnan(alpha) or alpha < 1e-10 or alpha > 1e10:

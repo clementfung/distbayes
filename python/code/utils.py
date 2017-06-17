@@ -92,6 +92,33 @@ def load_dataset(dataset_name):
                 "Xvalid":Xvalid, 
                 "yvalid":yvalid}
 
+    elif dataset_name == "sns":
+
+        sns = pd.read_csv(os.path.join('..', 'data', 'sns.txt'), sep="\t")
+        nn, dd = sns.shape
+
+        npsns = sns.ix[np.random.permutation(nn),:].as_matrix().astype(int)
+        split = int(nn * 0.70)
+
+        X = npsns[0:split-1, 0:dd-2]
+        y = ((npsns[0:split-1, dd-1] - 1.5) * 2).astype(int)
+        Xvalid = npsns[split:nn-1, 0:dd-2]
+        yvalid = ((npsns[split:nn-1, dd-1] - 1.5) * 2).astype(int)
+
+        X, mu, sigma = standardize_cols(X)
+        Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
+
+        X = np.hstack([np.ones((X.shape[0], 1)), X])
+        Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
+
+        X = normalize_rows(X)
+        Xvalid = normalize_rows(Xvalid)
+
+        return {"X":X, "y":y, 
+                "Xvalid":Xvalid, 
+                "yvalid":yvalid}
+
+
 def normalize_rows(X):
 
     # Sets all rows to have L2 norm of 1. Needed for diff priv

@@ -35,7 +35,8 @@ class globalModel:
 
         while True:
 
-            (delta, f_new, g) = self.models[i % len(self.models)].privateFun(theta, self.w, batch_size, *args)
+            (delta, f_new, g) = self.models[i % len(self.models)].privateFun(
+                theta, self.w, batch_size, *args)
             funEvals += 1
             i += 1
 
@@ -57,11 +58,12 @@ class globalModel:
 
             if funEvals >= self.maxEvals:
                 if self.verbose:
-                    print("Reached maximum number of function evaluations %d" % self.maxEvals)
+                    print("Reached maximum number of function evaluations %d" %
+                          self.maxEvals)
                 break
 
-        print "Done fitting."
-       
+        print "Done fitting global model."
+
     def selectFeatures(self, minVotes):
 
         n, d = self.models[0].X.shape
@@ -74,7 +76,7 @@ class globalModel:
 
     def predict(self, X):
         w = self.w
-        
+
         if self.logistic:
             yhat = np.sign(np.dot(X, w))
         else:
@@ -105,23 +107,23 @@ class globalModel:
         k = len(self.models)
 
         modelX = np.zeros(shape=(n, k))
-        
+
         for i in xrange(k):
             modelX[:, i] = self.models[i].privatePredict(X, epsilon)
 
         A = np.dot(modelX.T, modelX)
         B = np.dot(modelX.T, y)
-        
+
         self.modelX = modelX
         self.weights = np.linalg.solve(A, B)
 
     def predictWeightedAverage(self, X):
-        
+
         n, d = X.shape
         k = len(self.models)
 
         modelX = np.zeros(shape=(n, k))
-        
+
         for i in xrange(k):
             modelX[:, i] = self.models[i].predict(X)
 
@@ -131,4 +133,3 @@ class globalModel:
             yhat = np.dot(modelX, self.weights.T)
 
         return yhat
-

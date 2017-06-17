@@ -1,8 +1,10 @@
 from __future__ import division
 import numpy as np
+import math
 import minimizers
 import utils
 import pdb
+from numpy.linalg import norm
 
 
 class logReg:
@@ -12,57 +14,13 @@ class logReg:
         self.maxEvals = maxEvals
         self.X = X
         self.y = y
-        self.alpha = 1
-        
+        self.init_alpha = 1e-2
+        self.alpha = self.init_alpha
+        self.iter = 1
+        self.hist_grad = 0
+
         n, self.d = self.X.shape
-        self.w = np.zeros(self.d)        
-        #utils.check_gradient(self, self.X, self.y)
-
-    # Reports the direct change to w, based on the given one.
-    # Batch size could be 1 for SGD, or 0 for full gradient.
-    def privateFun(self, theta, ww, batch_size=0):
-
-        nn, dd = self.X.shape
-
-        if batch_size > 0 and batch_size < nn:
-            idx = np.random.choice(nn, batch_size, replace=False)
-            f, g = self.funObj(ww, self.X[idx,:], self.y[idx])
-        else:
-            f, g = self.funObj(ww, self.X, self.y)
-
-        alpha = 1
-        gamma = 1e-4
-        threshold = int(self.d * theta)
-
-        # Line-search using quadratic interpolation to find an acceptable value of alpha
-        gg = g.T.dot(g)
-
-        while True:
-            delta = - alpha * g
-            w_new = ww + delta
-
-            if batch_size > 0 and batch_size < nn:
-                idx = np.random.choice(nn, batch_size, replace=False)
-                f_new, g_new = self.funObj(w_new, self.X[idx,:], self.y[idx])
-            else:
-                f_new, g_new = self.funObj(w_new, self.X, self.y)
-
-            #f_new, g_new = self.funObj(w_new, self.X, self.y)
-
-            if f_new <= f - gamma * alpha * gg:
-                break
-
-            if self.verbose > 1:
-                print("f_new: %.3f - f: %.3f - Backtracking..." % (f_new, f))
-         
-            # Update step size alpha
-            alpha = (alpha**2) * gg/(2.*(f_new - f + alpha*gg))
-
-        # Weird way to get NON top k values
-        param_filter = np.argpartition(abs(delta), -threshold)[:self.d - threshold]
-        delta[param_filter] = 0
-
-        return (delta, f_new, g_new)
+        self.w = np.zeros(self.d)
 
     def funObj(self, w, X, y):
         yXw = y * X.dot(w)
@@ -76,25 +34,94 @@ class logReg:
 
         return f, g
 
+    # Reports the direct change to w, based on the given one.
+    # Batch size could be 1 for SGD, or 0 for full gradient.
+    def privateFun(self, theta, ww, batch_size=0):
+
+        # Define constants and params
+        nn, dd = self.X.shape
+        threshold = int(self.d * theta)
+        self.iter = self.iter + 1
+
+        if batch_size > 0 and batch_size < nn:
+            idx = np.random.choice(nn, batch_size, replace=False)
+        else:
+            # Just take the full range
+            idx = range(nn)
+
+        f, g = self.funObj(ww, self.X[idx, :], self.y[idx])
+
+        # AdaGrad
+        self.hist_grad += g**2
+        ada_grad = g / (1e-6 + np.sqrt(self.hist_grad))
+
+        # Determine the actual step magnitude
+        delta = -self.alpha * ada_grad
+
+        # Weird way to get NON top k values
+        if theta < 1:
+            param_filter = np.argpartition(
+                abs(delta), -threshold)[:self.d - threshold]
+            delta[param_filter] = 0
+
+        w_new = ww + delta
+        f_new, g_new = self.funObj(w_new, self.X[idx, :], self.y[idx])
+
+        return (delta, f_new, g_new)
+
+    def sgd_fit(self, theta, batch_size=0, *args):
+
+        print "Training model."
+
+        # Parameters of the Optimization
+        optTol = 1e-4
+        i = 0
+        n, d = self.X.shape
+
+        # Initial guess
+        self.w = np.zeros(d)
+        funEvals = 1
+
+        while True:
+
+            (delta, f_new, g) = self.privateFun(
+                theta, self.w, batch_size, *args)
+            funEvals += 1
+
+            # Print progress
+            if self.verbose > 0:
+                print("%d - loss: %.3f" % (funEvals, f_new))
+                print("%d - g_norm: %.3f" % (funEvals, norm(g)))
+
+            # Update parameters
+            self.w = self.w + delta
+
+            # Test termination conditions
+            optCond = norm(g, float('inf'))
+
+            if optCond < optTol:
+                if self.verbose:
+                    print("Problem solved up to optimality tolerance %.3f" % optTol)
+                break
+
+            if funEvals >= self.maxEvals:
+                if self.verbose:
+                    print("Reached maximum number of function evaluations %d" %
+                          self.maxEvals)
+                break
+
+        print "Done fitting."
+
     def fit(self):
 
         (self.w, self.alpha, f, _) = minimizers.findMin(self.funObj, self.w, self.alpha,
-                                         self.maxEvals,
-                                         self.verbose,
-                                         self.X,
-                                         self.y)
+                                                        self.maxEvals,
+                                                        self.verbose,
+                                                        self.X,
+                                                        self.y)
 
-        print("Training error: %.3f" % utils.classification_error(self.predict(self.X), self.y))
-
-    def oneGradientStep(self):
-
-        (self.w, self.alpha, f, optTol) = minimizers.findMin(self.funObj, self.w, self.alpha,
-                                         1,  # Max one eval
-                                         self.verbose,
-                                         self.X,
-                                         self.y)
-
-        return (self.w, f, optTol)
+        print("Training error: %.3f" %
+              utils.classification_error(self.predict(self.X), self.y))
 
     def getParameters(self):
         return self.w
@@ -123,6 +150,7 @@ class logReg:
 
         return np.sign(yhat + utils.lap_noise(loc=0, scale=sens / epsilon, size=nn))
 
+
 class logRegL2(logReg):
 
     def __init__(self, X, y, lammy, verbose=1, maxEvals=100):
@@ -132,7 +160,12 @@ class logRegL2(logReg):
 
         self.X = X
         self.y = y
-        self.alpha = 1
+
+        self.iter = 1
+        self.init_alpha = 1e-2
+        self.alpha = self.init_alpha
+
+        self.hist_grad = 0
 
         n, self.d = self.X.shape
         self.w = np.zeros(self.d)
@@ -195,18 +228,20 @@ class logRegL1(logReg):
         # Initial guess
         self.w = np.zeros(dd)
         (self.w, f) = minimizers.findMinL1(self.funObj,
-                                        self.w,
-                                        self.lammy,
-                                        self.maxEvals,
-                                        self.verbose,
-                                        self.X, self.y)
+                                           self.w,
+                                           self.lammy,
+                                           self.maxEvals,
+                                           self.verbose,
+                                           self.X, self.y)
 
 # L0 Regularized Logistic Regression
+
+
 class logRegL0(logReg):
     # this is class inheritance:
     # we "inherit" the funObj and predict methods from logReg
     # and we overwrite the __init__ and fit methods below.
-    # Doing it this way avoids copy/pasting code. 
+    # Doing it this way avoids copy/pasting code.
     # You can get rid of it and copy/paste
     # the code from logReg if that makes you feel more at ease.
     def __init__(self, X, y, lammy=1.0, verbose=1, maxEvals=400):
@@ -222,13 +257,13 @@ class logRegL0(logReg):
         self.w = np.zeros(self.d)
 
     def fitSelected(self, selected):
-        n, d = self.X.shape  
+        n, d = self.X.shape
         w0 = np.zeros(self.d)
-        minimize = lambda ind: minimizers.findMin(self.funObj, 
-                                                  w0[ind], 
+        minimize = lambda ind: minimizers.findMin(self.funObj,
+                                                  w0[ind],
                                                   self.alpha,
-                                                  self.maxEvals, 
-                                                  self.verbose, 
+                                                  self.maxEvals,
+                                                  self.verbose,
                                                   self.X[:, ind], self.y)
 
         # re-train the model one last time using the selected features
@@ -236,16 +271,16 @@ class logRegL0(logReg):
         self.w[selected], _, _, _ = minimize(selected)
 
     def fit(self):
-        n, d = self.X.shape  
+        n, d = self.X.shape
         w0 = np.zeros(self.d)
-        minimize = lambda ind: minimizers.findMin(self.funObj, 
-                                                  w0[ind], 
+        minimize = lambda ind: minimizers.findMin(self.funObj,
+                                                  w0[ind],
                                                   self.alpha,
-                                                  self.maxEvals, 
-                                                  self.verbose, 
+                                                  self.maxEvals,
+                                                  self.verbose,
                                                   self.X[:, ind], self.y)
         selected = set()
-        selected.add(0) # always include the bias variable 
+        selected.add(0)  # always include the bias variable
         minLoss = np.inf
         oldLoss = 0
         bestFeature = -1
@@ -260,8 +295,8 @@ class logRegL0(logReg):
             for i in range(d):
                 if i in selected:
                     continue
-                
-                selected_new = selected | {i} # add "i" to the set
+
+                selected_new = selected | {i}  # add "i" to the set
                 # TODO: Fit the model with 'i' added to the features,
                 # then compute the score and update the minScore/minInd
 
@@ -270,7 +305,7 @@ class logRegL0(logReg):
                 sl = list(selected_new)
                 temp_w, _, _, _ = minimize(sl)
 
-                #pdb.set_trace()
+                # pdb.set_trace()
 
                 loss, _ = self.funObj(temp_w, self.X[:, sl], self.y)
 
@@ -279,7 +314,7 @@ class logRegL0(logReg):
                     bestFeature = i
 
             selected.add(bestFeature)
-        
+
         # re-train the model one last time using the selected features
         self.w = w0
-        self.w[list(selected)], _, _, _ = minimize(list(selected)) 
+        self.w[list(selected)], _, _, _ = minimize(list(selected))

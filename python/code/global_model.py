@@ -13,7 +13,6 @@ class globalModel:
         self.verbose = verbose
         self.maxEvals = maxEvals
         self.models = []
-        self.modelX = np.empty(0)
         self.weights = np.empty(0)
         self.logistic = logistic
 
@@ -114,7 +113,6 @@ class globalModel:
         A = np.dot(modelX.T, modelX)
         B = np.dot(modelX.T, y)
 
-        self.modelX = modelX
         self.weights = np.linalg.solve(A, B)
 
     def predictWeightedAverage(self, X):
@@ -133,3 +131,50 @@ class globalModel:
             yhat = np.dot(modelX, self.weights.T)
 
         return yhat
+
+
+class globalModelSVM(globalModel):
+
+     # Logistic Regression
+    def __init__(self, logistic=False, verbose=1, maxEvals=400):
+
+        self.verbose = verbose
+        self.maxEvals = maxEvals
+        self.models = []
+
+        self.weights = np.empty(0)
+        self.logistic = logistic
+
+    def add_model(self, model):
+        self.models.append(model)
+
+    # Uses the pegasos algorithm for the global SVM fitting
+    def fit(self, batch_size=0, *args):
+
+        print "Training global model with Pegasos algorithm"
+
+        # Parameters of the Optimization
+        optTol = 1e-2
+        i = 1
+        n, d = self.models[0].X.shape
+
+        # Initial guess
+        self.w = np.zeros(d)
+
+        while True:
+
+            learn_rate = 1 / (0.1 * i)
+            delta = self.models[
+                i % len(self.models)].svmUpdate(self.w, batch_size, *args)
+            i += 1
+
+            # Update parameters
+            self.w = (1 - 0.1 * learn_rate) * self.w + learn_rate * delta
+
+            if i >= self.maxEvals:
+                if self.verbose:
+                    print("Reached maximum number of function evaluations %d" %
+                          self.maxEvals)
+                break
+
+        print "Done fitting global model."

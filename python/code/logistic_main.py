@@ -6,6 +6,7 @@ import logistic_model
 import global_model
 import pdb
 from sklearn.linear_model import SGDClassifier
+from sklearn.svm import LinearSVC
 
 # Load Binary and Multi -class data
 data = utils.load_dataset("logisticData")
@@ -59,6 +60,11 @@ if __name__ == "__main__":
     print("sklearn sgd validation error %.3f" %
           utils.classification_error(clf.predict(XBinValid), yBinValid))
 
+    svmclf = LinearSVC()
+    svmclf.fit(XBin, yBin)
+    print("sklearn SVM validation error %.3f" %
+          utils.classification_error(svmclf.predict(XBinValid), yBinValid))
+
     # GLOBAL MODEL
     global_model_gd = global_model.globalModel(
         logistic=True, verbose=0, maxEvals=500)
@@ -74,7 +80,7 @@ if __name__ == "__main__":
     print("global 1 Validation error %.3f" %
           utils.classification_error(global_model_gd.predict(XBinValid), yBinValid))
 
-    # GLOBAL MODEL
+    # GLOBAL MODEL with SGD
     global_model_sgd = global_model.globalModel(
         logistic=True, verbose=0, maxEvals=100000)
     global_model_sgd.add_model(model1)
@@ -91,6 +97,21 @@ if __name__ == "__main__":
     print("global 1 SGD Validation error %.3f" %
           utils.classification_error(global_model_sgd.predict(XBinValid), yBinValid))
 
+    # GLOBAL MODEL with PEGASOS
+    global_model_pegasos = global_model.globalModelSVM(
+        logistic=True, verbose=0, maxEvals=100000)
+    global_model_pegasos.add_model(model1)
+    global_model_pegasos.add_model(model2)
+    global_model_pegasos.add_model(model3)
+    global_model_pegasos.add_model(model4)
+    global_model_pegasos.add_model(model5)
+    global_model_pegasos.fit(batch_size=training_batch_size)
+
+    print("global SVM Training error %.3f" %
+          utils.classification_error(global_model_pegasos.predict(XBin), yBin))
+    print("global SVM Validation error %.3f" %
+          utils.classification_error(global_model_pegasos.predict(XBinValid), yBinValid))
+
     # FULL
     sk_full = logistic_model.logRegL2(XBin, yBin,
                                       lammy=0.1, verbose=0, maxEvals=100000)
@@ -101,6 +122,7 @@ if __name__ == "__main__":
           utils.classification_error(sk_full.predict(XBinValid), yBinValid))
 
     # RAW AVERAGE
+    print("----------------------------------------------")
     print("global-averaging e=0.1 Validation error %.3f" %
           utils.classification_error(global_model_gd.predictAverage(
               XBinValid, epsilon=0.1), yBinValid))

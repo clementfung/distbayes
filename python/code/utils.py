@@ -7,6 +7,43 @@ from numpy.linalg import norm
 import pandas as pd
 import pdb
 
+def sliceup():
+
+    data = load_pkl(os.path.join('..', "data", 'logisticData.pkl'))
+        
+    X, y = data['X'], data['y']
+    Xvalid, yvalid = data['Xvalidate'], data['yvalidate']
+
+    n, _ = X.shape
+
+    randseed = np.random.permutation(n)
+    X = X[randseed,:]
+    y = y[randseed]
+
+    X, mu, sigma = standardize_cols(X)
+    Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
+
+    X = np.hstack([np.ones((X.shape[0], 1)), X])
+    Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
+
+    data = np.hstack((X[0:100, :], y[0:100].reshape((100, 1))))
+    np.savetxt("./split_data/logData1.csv", data, delimiter=',')
+
+    data = np.hstack((X[100:200, :], y[100:200].reshape((100, 1))))
+    np.savetxt("./split_data/logData2.csv", data, delimiter=',')
+
+    data = np.hstack((X[200:300, :], y[200:300].reshape((100, 1))))
+    np.savetxt("./split_data/logData3.csv", data, delimiter=',')
+
+    data = np.hstack((X[300:400, :], y[300:400].reshape((100, 1))))
+    np.savetxt("./split_data/logData4.csv", data, delimiter=',')
+
+    data = np.hstack((X[400:500, :], y[400:500].reshape((100, 1))))
+    np.savetxt("./split_data/logData5.csv", data, delimiter=',')
+
+    data = np.hstack((Xvalid, y.reshape((500, 1))))
+    np.savetxt("./split_data/logTest.csv", data, delimiter=',')
+
 def load_dataset(dataset_name):
 
     # Load and standardize the data and add the bias term

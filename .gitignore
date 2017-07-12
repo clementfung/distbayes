@@ -29,5 +29,5 @@ _testmain.go
 *.swp
 
 # Log Files
-python/code/*.pyc
+*.pyc
 *-Log.txt

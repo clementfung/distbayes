@@ -41,7 +41,7 @@ def sliceup():
     data = np.hstack((X[400:500, :], y[400:500].reshape((100, 1))))
     np.savetxt("./split_data/logData5.csv", data, delimiter=',')
 
-    data = np.hstack((Xvalid, y.reshape((500, 1))))
+    data = np.hstack((Xvalid, yvalid.reshape((500, 1))))
     np.savetxt("./split_data/logTest.csv", data, delimiter=',')
 
 def load_dataset(dataset_name):

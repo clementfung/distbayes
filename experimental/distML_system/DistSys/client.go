@@ -64,65 +64,6 @@ func main() {
 
 	logModule = python.PyImport_ImportModule("logistic_model")
 
-	//privateFun := linModule.GetAttrString("privateFun")
-	//fmt.Printf("%v nono\n", privateFun)
-
-	//result2 := privateFun.CallFunction(python.PyInt_FromLong(2))
-	//fmt.Printf("%s haha1\n\n\n", python.PyString_AsString(result2.Str()))
-
-	//result2 = privateFun.CallFunction(python.PyInt_FromLong(1))
-	//fmt.Printf("%s haha2\n\n\n", python.PyString_AsString(result2.Str()))
-
-	//fmt.Printf("%d\n", python.PyList_GET_SIZE(result2))
-
-	//numWeights := linModule.GetAttrString("d")
-	//fmt.Printf("%s\n", python.PyString_AsString(numWeights.Str()))
-
-	//pyByteArray2 := python.PyByteArray_FromObject(result2)
-	//goByteArray2 := python.PyByteArray_AsBytes(pyByteArray2)
-
-	//var goFloatArray2 []float64
-	//size := len(goByteArray2) / 8
-
-	/*for i := 0; i < size; i++ {
-		currIndex := i * 8
-		bits := binary.LittleEndian.Uint64(goByteArray2[currIndex : currIndex+8])
-		float := math.Float64frombits(bits)
-		goFloatArray2 = append(goFloatArray2, float)
-	}*/
-
-	//fmt.Println(goFloatArray2, len(goFloatArray2))
-
-	/*testMultArgs := linModule.GetAttrString("testMultArgs")
-
-	argArray := python.PyList_New(size)
-
-	for i := 0; i < size; i++ {
-		python.PyList_SetItem(argArray, i, python.PyFloat_FromDouble(goFloatArray2[i]))
-	}
-
-	testMultArgs.CallFunction(python.PyInt_FromLong(size), argArray)*/
-
-	//fmt.Println(goByteArray2, len(goByteArray2))
-	//fmt.Printf("%d", python.PyInt_AsLong(linModule.GetAttrString("d")))
-	//modelArgs := python.PyTuple_New(2)
-	//fmt.Printf("%d\n\n", python.PyTuple_SetItem(modelArgs, 0, python.PyInt_FromLong(1)))
-	//fmt.Printf("%d\n\n", python.PyTuple_SetItem(modelArgs, 1, python.PyInt_FromLong(200)))
-	//python.PyList_Append(modelArgs, python.PyInt_FromLong(1))
-	//python.PyList_Append(modelArgs, python.PyInt_FromLong(200))
-
-	//fmt.Printf("%s       ,      %s\n", modelArgs.Type(), python.PyString_AsString(modelArgs.Type()))
-
-	//linModel = python.PyInstance_New(linBuilder, nil, nil)
-
-	//privateFun := linModule.GetAttrString("privateFun")
-	//privateFun.CallFunction(python.PyInt_FromLong(2), linBuilder.GetAttrString("w"))
-	//fmt.Printf("%v\n\n", privateFun) //privateFun.CallFunction(python.PyInt_FromLong(2)))
-
-	//testModule := python.PyImport_ImportModule("testclass")
-
-	//fmt.Printf("This is test module: %v\n", testModule)
-
 	parseArgs()
 	fmt.Printf("Node initialized as %v.\n", name)
 

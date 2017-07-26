@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/rpc"
 	"os"
+	"time"
 )
 
 const BUFFSIZE = 4096
@@ -36,17 +37,23 @@ type Node string
 
 // Global variables
 var (
-	name      string
-	inputargs []string
-	myaddr    *net.TCPAddr
-	svaddr    *net.TCPAddr
-	logger    *govec.GoLog
-	logModule *python.PyObject
-	initFunc  *python.PyObject
-	privFunc  *python.PyObject
-	dataset   string
-	//linBuilder *python.PyObject
-	//linModel   *python.PyObject
+	name               string
+	inputargs          []string
+	myaddr             *net.TCPAddr
+	svaddr             *net.TCPAddr
+	logger             *govec.GoLog
+	logModule          *python.PyObject
+	logInitFunc        *python.PyObject
+	logPrivFunc        *python.PyObject
+	linModule          *python.PyObject
+	linInitFunc        *python.PyObject
+	linPrivFunc        *python.PyObject
+	dataset            string
+	goFloatsToPyObject time.Duration = 0
+	gopyLatency        time.Duration = 0
+	pyObjectToGoFloats time.Duration = 0
+	curIteration       int           = 0
+	modelType          string
 )
 
 func init() {
@@ -62,15 +69,31 @@ func main() {
 	python.PyList_Insert(sysPath, 0, python.PyString_FromString("./"))
 	python.PyList_Insert(sysPath, 0, python.PyString_FromString("../ML/code"))
 
-	logModule = python.PyImport_ImportModule("logistic_model")
-
 	parseArgs()
 	fmt.Printf("Node initialized as %v.\n", name)
 
-	initFunc = logModule.GetAttrString("init")
-	numFeatures := initFunc.CallFunction(python.PyString_FromString(dataset))
+	numFeatures := python.PyInt_FromLong(0)
 
-	privFunc = logModule.GetAttrString("privateFun")
+	switch modelType {
+	case "log":
+		logModule = python.PyImport_ImportModule("logistic_model")
+		logInitFunc = logModule.GetAttrString("init")
+		logPrivFunc = logModule.GetAttrString("privateFun")
+		numFeatures = logInitFunc.CallFunction(python.PyString_FromString(dataset))
+
+	case "lin":
+		linModule = python.PyImport_ImportModule("linear_model")
+		linInitFunc = linModule.GetAttrString("init")
+		linPrivFunc = linModule.GetAttrString("privateFun")
+		numFeatures = linInitFunc.CallFunction(python.PyString_FromString(dataset))
+
+	case "linL2":
+		linModule = python.PyImport_ImportModule("linear_model")
+		linInitFunc = linModule.GetAttrString("init")
+		linPrivFunc = linModule.GetAttrString("privateFunL2")
+		numFeatures = linInitFunc.CallFunction(python.PyString_FromString(dataset))
+
+	}
 
 	// Registering the local node's remote procedure
 	node := new(Node)
@@ -100,46 +123,32 @@ func main() {
 	select {}
 }
 
-// Remote procedure for perfoming gradient descent updates
-func (t *Node) RequestUpdate(args Weights, reply *Weights) error {
-	// TODO:
-	// perform gradient descent here
-	// get updated weights and return deltas
-	/*for i := 0; i < len(args.Array); i++ {
-		(*reply).Array[i] = rand.Float64()
-	}*/
-	//fmt.Printf("%f", args)
-	//reply = rand.Float64()
-	//deltas := linModel.GetAttrString("privateFun").CallFunction(python.PyInt_FromLong(2), linModel.GetAttrString("w"))
-	//fmt.Printf("%s\n", python.PyString_AsString(deltas.Str()))
-	//fmt.Println("Pre PyList allocation")
-	argArray := python.PyList_New(len(args.Array))
-	//fmt.Println("Post PyList allocation")
+// Remote procedure for perfoming gradient descent updates for logistic regression
+func (t *Node) RequestUpdateLog(args Weights, reply *Weights) error {
+	curIteration++
+	start := time.Now()
 
-	//fmt.Println("Pre PyList initalization")
+	argArray := python.PyList_New(len(args.Array))
+
 	for i := 0; i < len(args.Array); i++ {
 		python.PyList_SetItem(argArray, i, python.PyFloat_FromDouble(args.Array[i]))
 	}
-	//fmt.Println("Pre PyList initialization")
 
-	//fmt.Println("Pre privateFun call")
-	result := privFunc.CallFunction(python.PyInt_FromLong(1), argArray)
-	//fmt.Println("Post privateFun call")
+	goFloatsToPyObject += time.Since(start)
 
-	//fmt.Println("Pre PyByteArray conversion")
+	start1 := time.Now()
+	result := logPrivFunc.CallFunction(python.PyInt_FromLong(1), argArray)
+
+	gopyLatency += time.Since(start1)
+
+	start2 := time.Now()
 	pyByteArray := python.PyByteArray_FromObject(result)
-	//fmt.Println("Post PyByteArray conversion")
 
-	//fmt.Println("Pre GoByteArray conversion")
 	goByteArray := python.PyByteArray_AsBytes(pyByteArray)
-	//fmt.Println("Post GoByteArray conversion")
 
-	//fmt.Println("Pre GoFloatArray allocation")
 	var goFloatArray []float64
 	size := len(goByteArray) / 8
-	//fmt.Println("Post GoFloatArray allocation")
 
-	//fmt.Println("Pre GoFloatArray initialization")
 	for i := 0; i < size; i++ {
 		currIndex := i * 8
 		bits := binary.LittleEndian.Uint64(goByteArray[currIndex : currIndex+8])
@@ -147,10 +156,61 @@ func (t *Node) RequestUpdate(args Weights, reply *Weights) error {
 		goFloatArray = append(goFloatArray, float)
 	}
 	//fmt.Println("Post GoFloatArray initalization")
-
+	pyObjectToGoFloats += time.Since(start2)
 	(*reply).Array = goFloatArray
 
 	//fmt.Println("End of method")
+
+	if curIteration == 20000 {
+		fmt.Printf("Go float array -> Python List: %s\n", goFloatsToPyObject)
+		fmt.Printf("go-python function call: %s\n", gopyLatency)
+		fmt.Printf("Python list -> Go float array: %s\n", pyObjectToGoFloats)
+	}
+
+	return nil
+}
+
+// Remote procedure for perfoming gradient descent updates for linear regression
+func (t *Node) RequestUpdateLin(args Weights, reply *Weights) error {
+	curIteration++
+	start := time.Now()
+
+	argArray := python.PyList_New(len(args.Array))
+
+	for i := 0; i < len(args.Array); i++ {
+		python.PyList_SetItem(argArray, i, python.PyFloat_FromDouble(args.Array[i]))
+	}
+
+	goFloatsToPyObject += time.Since(start)
+
+	start1 := time.Now()
+	result := linPrivFunc.CallFunction(python.PyInt_FromLong(1), argArray, python.PyInt_FromLong(5))
+
+	gopyLatency += time.Since(start1)
+
+	start2 := time.Now()
+	pyByteArray := python.PyByteArray_FromObject(result)
+
+	goByteArray := python.PyByteArray_AsBytes(pyByteArray)
+
+	var goFloatArray []float64
+	size := len(goByteArray) / 8
+
+	for i := 0; i < size; i++ {
+		currIndex := i * 8
+		bits := binary.LittleEndian.Uint64(goByteArray[currIndex : currIndex+8])
+		float := math.Float64frombits(bits)
+		goFloatArray = append(goFloatArray, float)
+	}
+
+	pyObjectToGoFloats += time.Since(start2)
+	(*reply).Array = goFloatArray
+
+	if curIteration == 15000 {
+		fmt.Printf("Go float array -> Python List: %s\n", goFloatsToPyObject)
+		fmt.Printf("go-python function call: %s\n", gopyLatency)
+		fmt.Printf("Python list -> Go float array: %s\n", pyObjectToGoFloats)
+	}
 
 	return nil
 }
@@ -160,7 +220,7 @@ func parseArgs() {
 	flag.Parse()
 	inputargs = flag.Args()
 	var err error
-	if len(inputargs) < 5 {
+	if len(inputargs) < 6 {
 		fmt.Printf("Not enough inputs.\n")
 		return
 	}
@@ -170,6 +230,7 @@ func parseArgs() {
 	svaddr, err = net.ResolveTCPAddr("tcp", inputargs[2])
 	logger = govec.Initialize(inputargs[0], inputargs[3])
 	dataset = inputargs[4]
+	modelType = inputargs[5]
 }
 
 // Error checking function

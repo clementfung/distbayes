@@ -27,14 +27,19 @@ func main() {
 
 	// Create proxy dialer using Tor SOCKS proxy
 	fmt.Println("Trying 9150")
-	torDialer, err := proxy.SOCKS5("tcp", "127.0.0.1:9150", nil, proxy.Direct)
+	dialer, err := proxy.SOCKS5("tcp", "127.0.0.1:9150", nil, proxy.Direct)
 	checkError(err)
 
 	fmt.Println("SOCKS5 Dial success!")
 
-	rpcCaller, err := TorDial(torDialer, "tcp", ONION_HOST)
-	checkError(err)
+	//rpcCaller, err := TorDial(torDialer, "tcp", ONION_HOST)
+	//checkError(err)
 
+	conn, err := dialer.Dial("tcp", ONION_HOST)
+  	checkError(err)
+  	fmt.Println("Dialer Dialed.")
+
+  	rpcCaller := rpc.NewClient(conn)
 	fmt.Println("TOR Dial Success!")
 
 	var reply int = 0
@@ -61,8 +66,16 @@ func TorDial(dialer proxy.Dialer, network, address string) (*rpc.Client, error) 
 	
 	conn, err := dialer.Dial(network, address)
   	checkError(err)
+  	fmt.Println("Dialer Dialed.")
 
-  	return rpc.NewClient(conn), err
+  	if err == nil {
+  		return rpc.NewClient(conn), nil
+  	}
+  	
+  	fmt.Println("BIG FAILURE")
+  	conn.Close()
+  	return nil, err
+
 }
 
 // Error checking function

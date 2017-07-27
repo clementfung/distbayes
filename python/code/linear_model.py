@@ -13,45 +13,48 @@ class linReg:
         self.maxEvals = maxEvals
         self.X = X
         self.y = y
-        self.alpha = 1
+        self.alpha = 1e-2
+        self.iter = 0
 
         n, self.d = self.X.shape
         self.w = np.zeros(self.d)
+        self.hist_grad = np.zeros(self.d)
 
-    # Reports the direct change to w, based on the given one.
-    def privateFun(self, theta, ww):
+    def privateFun(self, theta, ww, batch_size=0):
 
-        f, g = self.funObj(ww, self.X, self.y)
-
-        alpha = 1
-        gamma = 1e-4
+        # Define constants and params
+        nn, dd = self.X.shape
         threshold = int(self.d * theta)
+        self.iter = self.iter + 1
 
-        # Line-search using quadratic interpolation to find an acceptable value of alpha
-        gg = g.T.dot(g)
+        if batch_size > 0 and batch_size < nn:
+            idx = np.random.choice(nn, batch_size, replace=False)
+        else:
+            # Just take the full range
+            idx = range(nn)
 
-        while True:
-            delta = - alpha * g
-            w_new = ww + delta
-            f_new, g_new = self.funObj(w_new, self.X, self.y)
+        f, g = self.funObj(ww, self.X[idx, :], self.y[idx])
 
-            if f_new <= f - gamma * alpha * gg:
-                break
+        # AdaGrad
+        self.hist_grad += g**2
+        ada_grad = g / (1e-6 + np.sqrt(self.hist_grad))
 
-            if self.verbose > 1:
-                print("f_new: %.3f - f: %.3f - Backtracking..." % (f_new, f))
-         
-            # Update step size alpha
-            alpha = (alpha**2) * gg/(2.*(f_new - f + alpha*gg))
+        # Determine the actual step magnitude
+        delta = -self.alpha * ada_grad
 
         # Weird way to get NON top k values
-        param_filter = np.argpartition(abs(delta), -threshold)[:self.d - threshold]
-        delta[param_filter] = 0
+        if theta < 1:
+            param_filter = np.argpartition(
+                abs(delta), -threshold)[:self.d - threshold]
+            delta[param_filter] = 0
+
+        w_new = ww + delta
+        f_new, g_new = self.funObj(w_new, self.X[idx, :], self.y[idx])
 
         return (delta, f_new, g_new)
 
     def funObj(self, w, X, y):
-        
+
         xwy = (X.dot(w) - y)
         f = 0.5 * xwy.T.dot(xwy)
         g = X.T.dot(xwy)
@@ -60,11 +63,12 @@ class linReg:
 
     def fit(self):
 
-        (self.w, self.alpha, f, _) = minimizers.findMin(self.funObj, self.w, self.alpha,
-                                         self.maxEvals,
-                                         self.verbose,
-                                         self.X,
-                                         self.y)
+        (self.w, self.alpha, f, _) = minimizers.findMin(self.funObj, self.w,
+                                                        self.alpha,
+                                                        self.maxEvals,
+                                                        self.verbose,
+                                                        self.X,
+                                                        self.y)
 
     def predict(self, X):
         w = self.w
@@ -79,8 +83,10 @@ class linReg:
         # TODO: Estimate the L1 Sensitivity in a better way
         sens = (dd * dd + 2 * dd + 1) * 2
 
-        y_private = yhat + utils.lap_noise(loc=0, scale=sens / epsilon, size=nn)
+        y_private = yhat + \
+            utils.lap_noise(loc=0, scale=sens / epsilon, size=nn)
         return y_private
+
 
 class linRegL2(linReg):
 
@@ -91,10 +97,12 @@ class linRegL2(linReg):
 
         self.X = X
         self.y = y
-        self.alpha = 1
-        
+        self.alpha = 1e-2
+        self.iter = 0
+
         n, self.d = self.X.shape
-        self.w = np.zeros(self.d)        
+        self.w = np.zeros(self.d)
+        self.hist_grad = np.zeros(self.d)
 
     def funObj(self, ww, X, y):
 

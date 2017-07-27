@@ -3,90 +3,128 @@ import numpy as np
 import utils
 import pdb
 
-verbose = 0
-maxEvals = 100
-X = utils.load_dataset("slices")['X']
-y = utils.load_dataset("slices")['y']
-alpha = 1
-d = X.shape[1]
-w = np.zeros(d)
 lammy = 0.1
+verbose = 1
+maxEvals = 10000
+X = 0
+y = 0
+iteration = 1
+alpha = 1e-2
+d = 0
+hist_grad = 0
 
-print X.shape[0]
+def init(dataset):
 
-def changeVerbose(Verbose=0):
-    global verbose
-    verbose = Verbose
+    global X
+    X = utils.load_dataset(dataset)['X']
 
-def changeMaxEvals(MaxEvals=100):
-    global maxEvals
-    maxEvals = MaxEvals
+    global y
+    y = utils.load_dataset(dataset)['y']
 
-def changeLammy(Lammy=0.1):
-    global lammy
-    lammy = Lammy
+    global d
+    d = X.shape[1]
 
-def privateFun(theta):
-    global w
+    global hist_grad
+    hist_grad = np.zeros(d)
 
-    f, g = funObj(w, X, y)
-
-    alpha = 1
-    gamma = 1e-4
-    threshold = int(d * theta)
-
-    gg = g.T.dot(g)
-
-    while True:
-        delta = - alpha * g
-        w_new = w + delta
-        f_new, g_new = funObj(w_new, X, y)
-
-        if f_new <= f - gamma * alpha * gg:
-            break
-
-        if verbose > 1:
-            print("f_new: %.3f - f: %.3f - Backtracking..." % (f_new, f))
-         
-        # Update step size alpha
-        alpha = (alpha**2) * gg/(2.*(f_new - f + alpha*gg))
-
-    # Weird way to get NON top k values
-    #param_filter = np.argpartition(abs(delta), -threshold)[:d - threshold]
-    #delta[param_filter] = 0
-
-    w = w_new
-    return delta
+    return d
 
 def funObj(ww, X, y):
-        
-    xwy = (X.dot(ww) - y)
-    f = 0.5 * xwy.T.dot(xwy) + 0.5 * lammy * ww.T.dot(ww)
-    g = X.T.dot(xwy) + lammy * ww
+    xwy = (X.dot(w) - y)
+    f = 0.5 * xwy.T.dot(xwy)
+    g = X.T.dot(xwy)
 
     return f, g
 
-def predict(X):
-    yhat = np.dot(X, w)
-    return yhat
+def funObjL2(ww, X, y):
+    xwy = (X.dot(ww) - y)
+    f = 0.5 * xwy.T.dot(xwy) + 0.5 * self.lammy * ww.T.dot(ww)
+    g = X.T.dot(xwy) + self.lammy * ww
 
-def privatePredict(X, epsilon):
+    return f, g
+
+# Reports the direct change to w, based on the given one.
+# Batch size could be 1 for SGD, or 0 for full gradient.
+def privateFun(theta, ww, batch_size=0):
+
+    global iteration
+    print 'python iteration ' + str(iteration) + ' starting'
+
+    ww = np.array(ww)
+
+    # Define constants and params
     nn, dd = X.shape
-    yhat = np.dot(X, w)
+    threshold = int(d * theta)
 
-    # TODO: Estimate the L1 Sensitivity in a better way
-    sens = (dd * dd + 2 * dd + 1) * 2
+    if batch_size > 0 and batch_size < nn:
+        idx = np.random.choice(nn, batch_size, replace=False)
+    else:
+        # Just take the full range
+        idx = range(nn)
 
-'''def testMultArgs(argLong, argFloatArray):
-    print 'before first'
-    print argLong
-    print 'after first'
+    f, g = funObj(ww, X[idx, :], y[idx])
 
-    print 'before second'
-    print argFloatArray
-    print 'after second'
+    # AdaGrad
+    global hist_grad
+    hist_grad += g**2
 
-    print 'before third'
-    print np.size(argFloatArray)
-    print 'after third'
-    '''
+    ada_grad = g / (1e-6 + np.sqrt(hist_grad))
+
+    # Determine the actual step magnitude
+    delta = -alpha * ada_grad
+
+    # Weird way to get NON top k values
+    if theta < 1:
+        param_filter = np.argpartition(
+            abs(delta), -threshold)[:d - threshold]
+        delta[param_filter] = 0
+
+    w_new = ww + delta
+    f_new, g_new = funObj(w_new, X[idx, :], y[idx])
+
+    print 'python iteration ' + str(iteration) + ' ending'
+    iteration = iteration + 1
+
+    return delta
+
+def privateFunL2(theta, ww, batch_size=0):
+
+    global iteration
+    print 'python iteration ' + str(iteration) + ' starting'
+
+    ww = np.array(ww)
+
+    # Define constants and params
+    nn, dd = X.shape
+    threshold = int(d * theta)
+
+    if batch_size > 0 and batch_size < nn:
+        idx = np.random.choice(nn, batch_size, replace=False)
+    else:
+        # Just take the full range
+        idx = range(nn)
+
+    f, g = funObjL2(ww, X[idx, :], y[idx])
+
+    # AdaGrad
+    global hist_grad
+    hist_grad += g**2
+
+    ada_grad = g / (1e-6 + np.sqrt(hist_grad))
+
+    # Determine the actual step magnitude
+    delta = -alpha * ada_grad
+
+    # Weird way to get NON top k values
+    if theta < 1:
+        param_filter = np.argpartition(
+            abs(delta), -threshold)[:d - threshold]
+        delta[param_filter] = 0
+
+    w_new = ww + delta
+    f_new, g_new = funObjL2(w_new, X[idx, :], y[idx])
+
+    print 'python iteration ' + str(iteration) + ' ending'
+    iteration = iteration + 1
+
+    return delta

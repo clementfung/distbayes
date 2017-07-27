@@ -42,14 +42,38 @@ var (
 	logger      *govec.GoLog
 	globalW     Weights
 	deltas      Weights
-	//numclients  int = 0
+	modelType   string
+	testModule  *python.PyObject
+	testFunc    *python.PyObject
 )
+
+func init() {
+	err := python.Initialize()
+	if err != nil {
+		panic(err.Error())
+	}
+}
 
 func main() {
 	// Initialize data/parse arguments
 	client = make(map[string]int)
 	claddr = make(map[int]*net.TCPAddr)
 	parseArgs()
+
+	switch modelType {
+
+	case "log":
+		testModule = python.PyImport_ImportModule("logistic_model_test")
+
+	case "lin":
+		testModule = python.PyImport_ImportModule("linear_model_test")
+
+	case "linL2":
+		testModule = python.PyImport_ImportModule("linear_model_test")
+
+	}
+
+	testFunc = testModule.GetAttrString("test")
 
 	// Registering the server's remote procedure
 	server := new(Server)
@@ -120,11 +144,11 @@ func parseUserInput() {
 			ident = text[0 : len(text)-1]
 		}
 		switch ident {
-		case "g":
-			fmt.Printf("global_model.train() just received by server!!\n")
+		case "train_logistic":
+			//fmt.Printf("global_model.train() just received by server!!\n")
 			// TODO: This is synch for now. needs to become asynch
 
-			for i := 1; i <= 5000; i++ {
+			for i := 1; i <= 20000; i++ {
 				fmt.Printf("Iteration %d started.\n", i)
 				//numclients = 0
 				for name, id := range client {
@@ -139,7 +163,7 @@ func parseUserInput() {
 					} else {
 						deltas.Array = []float64{}
 						//fmt.Println("Pre call")
-						err = rpcCaller.Call("Node.RequestUpdate", globalW, &deltas)
+						err = rpcCaller.Call("Node.RequestUpdateLog", globalW, &deltas)
 						//fmt.Println("Post call")
 						rpcCaller.Close()
 						if err != nil {
@@ -171,7 +195,7 @@ func parseUserInput() {
 					globalW.Array[k] = globalW.Array[k] / float64(numclients)
 				}*/
 
-				fmt.Printf("Iteration %d completed.\n", i)
+				//fmt.Printf("Iteration %d completed.\n", i)
 			}
 
 			fmt.Printf("Global weights (after completion): %v\n", globalW.Array)
@@ -190,6 +214,91 @@ func parseUserInput() {
 				}
 			}*/
 			fmt.Print("Enter command: ")
+
+		case "train_linear":
+			//fmt.Printf("global_model.train() just received by server!!\n")
+			// TODO: This is synch for now. needs to become asynch
+
+			for i := 1; i <= 15000; i++ {
+				fmt.Printf("Iteration %d started.\n", i)
+				//numclients = 0
+				for name, id := range client {
+					//fmt.Println("Pre dial")
+					rpcCaller, err := rpc.DialHTTP("tcp", claddr[id].String())
+					//fmt.Println("Post dial")
+					if err != nil {
+						// TODO: Deregistration of dead clients (so that you don't contact it again)
+						//fmt.Println(err)
+						fmt.Printf("\nUnable to contact %s(%s).\n\n", name, claddr[id].String())
+						os.Exit(1)
+					} else {
+						deltas.Array = []float64{}
+						//fmt.Println("Pre call")
+						err = rpcCaller.Call("Node.RequestUpdateLin", globalW, &deltas)
+						//fmt.Println("Post call")
+						rpcCaller.Close()
+						if err != nil {
+							//fmt.Println(err)
+							fmt.Printf("\nRemote procedure call to %s(%s) failed.\n\n", name, claddr[id].String())
+							os.Exit(1)
+						} else {
+							//numclients++
+							/*if globalW.Array == nil {
+								for j := 0; j < len(deltas.Array); j++ {
+									globalW.Array = append(globalW.Array, deltas.Array[j])
+								}
+							}
+							else {
+								for j := 0; j < len(deltas.Array); j++ {
+									globalW.Array[j] += deltas.Array[j]
+								}
+							}*/
+							for j := 0; j < len(deltas.Array); j++ {
+								globalW.Array[j] += deltas.Array[j]
+							}
+						}
+					}
+				}
+
+				// Possible divide by zero error here?
+				/*fmt.Printf("numClients: %d\n", numclients)
+				for k := 0; k < len(globalW.Array); k++ {
+					globalW.Array[k] = globalW.Array[k] / float64(numclients)
+				}*/
+
+				//fmt.Printf("Iteration %d completed.\n", i)
+			}
+
+			fmt.Printf("Global weights (after completion): %v\n", globalW.Array)
+
+			/*for name, id := range client {
+				rpcCaller, err := rpc.DialHTTP("tcp", claddr[id].String()) // This fails only when a local node is down (possible), so we do not panic if err is not nil
+				if err != nil {
+					// TODO: Deregistration of dead clients (so that you don't contact it again)
+					fmt.Printf("\nUnable to contact %s(%s).\n\n", name, claddr[id].String())
+
+				} else {
+					err = rpcCaller.Call("Node.RequestUpdate", globalW, &deltas)
+					if
+					checkError(err) // Something failed during the RPC call, so we should panic
+					fmt.Printf("\nFor client address: %s, globalW = %v, deltas = %v\n\n", claddr[id].String(), globalW, deltas)
+				}
+			}*/
+			fmt.Print("Enter command: ")
+
+		case "test":
+
+			argArray := python.PyList_New(len(globalW))
+
+			for i := 0; i < len(globalW); i++ {
+				python.PyList_SetItem(argArray, i, python.PyFloat_FromDouble(globalW[i]))
+			}
+
+			result := testFunc.CallFunction(argArray)
+			err := python.PyLong_AsDouble(result)
+			fmt.Printf("The loss is %f\n", err)
+			fmt.Print("Enter command: ")
+
 		default:
 			fmt.Printf(" Command not recognized: %v.\n\n", ident)
 			fmt.Printf("  Choose from the following commands\n")
@@ -204,13 +313,14 @@ func parseArgs() {
 	flag.Parse()
 	inputargs := flag.Args()
 	var err error
-	if len(inputargs) < 2 {
+	if len(inputargs) < 3 {
 		fmt.Printf("Not enough inputs.\n")
 		return
 	}
 	myaddr, err = net.ResolveTCPAddr("tcp", inputargs[0])
 	checkError(err)
 	logger = govec.Initialize(inputargs[1], inputargs[1])
+	modelType = inputargs[2]
 }
 
 // Error checking function

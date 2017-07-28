@@ -145,145 +145,64 @@ func parseUserInput() {
 		}
 		switch ident {
 		case "train_logistic":
-			//fmt.Printf("global_model.train() just received by server!!\n")
 			// TODO: This is synch for now. needs to become asynch
-
 			for i := 1; i <= 20000; i++ {
 				fmt.Printf("Iteration %d started.\n", i)
-				//numclients = 0
 				for name, id := range client {
-					//fmt.Println("Pre dial")
 					rpcCaller, err := rpc.DialHTTP("tcp", claddr[id].String())
 					//fmt.Println("Post dial")
 					if err != nil {
 						// TODO: Deregistration of dead clients (so that you don't contact it again)
-						//fmt.Println(err)
 						fmt.Printf("\nUnable to contact %s(%s).\n\n", name, claddr[id].String())
 						os.Exit(1)
 					} else {
 						deltas.Array = []float64{}
-						//fmt.Println("Pre call")
 						err = rpcCaller.Call("Node.RequestUpdateLog", globalW, &deltas)
-						//fmt.Println("Post call")
 						rpcCaller.Close()
 						if err != nil {
 							//fmt.Println(err)
 							fmt.Printf("\nRemote procedure call to %s(%s) failed.\n\n", name, claddr[id].String())
 							os.Exit(1)
 						} else {
-							//numclients++
-							/*if globalW.Array == nil {
-								for j := 0; j < len(deltas.Array); j++ {
-									globalW.Array = append(globalW.Array, deltas.Array[j])
-								}
-							}
-							else {
-								for j := 0; j < len(deltas.Array); j++ {
-									globalW.Array[j] += deltas.Array[j]
-								}
-							}*/
 							for j := 0; j < len(deltas.Array); j++ {
 								globalW.Array[j] += deltas.Array[j]
 							}
 						}
 					}
 				}
-
-				// Possible divide by zero error here?
-				/*fmt.Printf("numClients: %d\n", numclients)
-				for k := 0; k < len(globalW.Array); k++ {
-					globalW.Array[k] = globalW.Array[k] / float64(numclients)
-				}*/
-
-				//fmt.Printf("Iteration %d completed.\n", i)
 			}
 
 			fmt.Printf("Global weights (after completion): %v\n", globalW.Array)
-
-			/*for name, id := range client {
-				rpcCaller, err := rpc.DialHTTP("tcp", claddr[id].String()) // This fails only when a local node is down (possible), so we do not panic if err is not nil
-				if err != nil {
-					// TODO: Deregistration of dead clients (so that you don't contact it again)
-					fmt.Printf("\nUnable to contact %s(%s).\n\n", name, claddr[id].String())
-
-				} else {
-					err = rpcCaller.Call("Node.RequestUpdate", globalW, &deltas)
-					if
-					checkError(err) // Something failed during the RPC call, so we should panic
-					fmt.Printf("\nFor client address: %s, globalW = %v, deltas = %v\n\n", claddr[id].String(), globalW, deltas)
-				}
-			}*/
 			fmt.Print("Enter command: ")
 
 		case "train_linear":
-			//fmt.Printf("global_model.train() just received by server!!\n")
 			// TODO: This is synch for now. needs to become asynch
 
 			for i := 1; i <= 15000; i++ {
 				fmt.Printf("Iteration %d started.\n", i)
-				//numclients = 0
 				for name, id := range client {
-					//fmt.Println("Pre dial")
 					rpcCaller, err := rpc.DialHTTP("tcp", claddr[id].String())
-					//fmt.Println("Post dial")
 					if err != nil {
 						// TODO: Deregistration of dead clients (so that you don't contact it again)
-						//fmt.Println(err)
 						fmt.Printf("\nUnable to contact %s(%s).\n\n", name, claddr[id].String())
 						os.Exit(1)
 					} else {
 						deltas.Array = []float64{}
-						//fmt.Println("Pre call")
 						err = rpcCaller.Call("Node.RequestUpdateLin", globalW, &deltas)
-						//fmt.Println("Post call")
 						rpcCaller.Close()
 						if err != nil {
-							//fmt.Println(err)
 							fmt.Printf("\nRemote procedure call to %s(%s) failed.\n\n", name, claddr[id].String())
 							os.Exit(1)
 						} else {
-							//numclients++
-							/*if globalW.Array == nil {
-								for j := 0; j < len(deltas.Array); j++ {
-									globalW.Array = append(globalW.Array, deltas.Array[j])
-								}
-							}
-							else {
-								for j := 0; j < len(deltas.Array); j++ {
-									globalW.Array[j] += deltas.Array[j]
-								}
-							}*/
 							for j := 0; j < len(deltas.Array); j++ {
 								globalW.Array[j] += deltas.Array[j]
 							}
 						}
 					}
 				}
-
-				// Possible divide by zero error here?
-				/*fmt.Printf("numClients: %d\n", numclients)
-				for k := 0; k < len(globalW.Array); k++ {
-					globalW.Array[k] = globalW.Array[k] / float64(numclients)
-				}*/
-
-				//fmt.Printf("Iteration %d completed.\n", i)
 			}
 
 			fmt.Printf("Global weights (after completion): %v\n", globalW.Array)
-
-			/*for name, id := range client {
-				rpcCaller, err := rpc.DialHTTP("tcp", claddr[id].String()) // This fails only when a local node is down (possible), so we do not panic if err is not nil
-				if err != nil {
-					// TODO: Deregistration of dead clients (so that you don't contact it again)
-					fmt.Printf("\nUnable to contact %s(%s).\n\n", name, claddr[id].String())
-
-				} else {
-					err = rpcCaller.Call("Node.RequestUpdate", globalW, &deltas)
-					if
-					checkError(err) // Something failed during the RPC call, so we should panic
-					fmt.Printf("\nFor client address: %s, globalW = %v, deltas = %v\n\n", claddr[id].String(), globalW, deltas)
-				}
-			}*/
 			fmt.Print("Enter command: ")
 
 		case "test":

@@ -63,17 +63,17 @@ if __name__ == "__main__":
     global_model.add_model(model4)
     global_model.add_model(model5)
 
-    global_model.fit(theta=0.1)
-    print("global 0.1 Training error %.3f" % 
-        utils.regression_error(global_model.predict(XBin), yBin))
-    print("global 0.1 Validation error %.3f" % 
-        utils.regression_error(global_model.predict(XBinValid), yBinValid))
+    # global_model.fit(theta=0.1)
+    # print("global 0.1 Training error %.3f" % 
+    #     utils.regression_error(global_model.predict(XBin), yBin))
+    # print("global 0.1 Validation error %.3f" % 
+    #     utils.regression_error(global_model.predict(XBinValid), yBinValid))
 
-    global_model.fit(theta=0.25)
-    print("global 0.25 Training error %.3f" % 
-        utils.regression_error(global_model.predict(XBin), yBin))
-    print("global 0.25 Validation error %.3f" % 
-        utils.regression_error(global_model.predict(XBinValid), yBinValid))
+    # global_model.fit(theta=0.25)
+    # print("global 0.25 Training error %.3f" % 
+    #     utils.regression_error(global_model.predict(XBin), yBin))
+    # print("global 0.25 Validation error %.3f" % 
+    #     utils.regression_error(global_model.predict(XBinValid), yBinValid))
 
     global_model.fit(theta=0.5)
     print("global 0.5 Training error %.3f" % 
@@ -114,29 +114,29 @@ if __name__ == "__main__":
         utils.regression_error(global_model.predictWeightedAverage(
             XBinValid[cutVal+1:cutVal2,:]), yBinValid[cutVal+1:cutVal2]))
 
-    ### KNOWLEDGE TRANSFER on public unlabelled
-    ypub = global_model.predictAverage(XBinValid[0:cutVal,:], epsilon=0.1)
-    global_kt = linear_model.linRegL2(XBinValid[0:cutVal,:], ypub, lammy=0.1, verbose=0, maxEvals=400)
-    global_kt.fit()
-    print("global-knowledge-transfer e=0.1 Validation error %.3f" % 
-        utils.regression_error(global_kt.predict(
-            XBinValid[cutVal+1:cutVal2,:]), yBinValid[cutVal+1:cutVal2]))
+    # ### KNOWLEDGE TRANSFER on public unlabelled
+    # ypub = global_model.predictAverage(XBinValid[0:cutVal,:], epsilon=0.1)
+    # global_kt = linear_model.linRegL2(XBinValid[0:cutVal,:], ypub, lammy=0.1, verbose=0, maxEvals=400)
+    # global_kt.fit()
+    # print("global-knowledge-transfer e=0.1 Validation error %.3f" % 
+    #     utils.regression_error(global_kt.predict(
+    #         XBinValid[cutVal+1:cutVal2,:]), yBinValid[cutVal+1:cutVal2]))
 
-    ### KNOWLEDGE TRANSFER on public unlabelled
-    ypub = global_model.predictAverage(XBinValid[0:cutVal,:], epsilon=0.01)
-    global_kt = linear_model.linRegL2(XBinValid[0:cutVal,:], ypub, lammy=0.1, verbose=0, maxEvals=400)
-    global_kt.fit()
-    print("global-knowledge-transfer e=0.01 Validation error %.3f" % 
-        utils.regression_error(global_kt.predict(
-            XBinValid[cutVal+1:cutVal2,:]), yBinValid[cutVal+1:cutVal2]))
+    # ### KNOWLEDGE TRANSFER on public unlabelled
+    # ypub = global_model.predictAverage(XBinValid[0:cutVal,:], epsilon=0.01)
+    # global_kt = linear_model.linRegL2(XBinValid[0:cutVal,:], ypub, lammy=0.1, verbose=0, maxEvals=400)
+    # global_kt.fit()
+    # print("global-knowledge-transfer e=0.01 Validation error %.3f" % 
+    #     utils.regression_error(global_kt.predict(
+    #         XBinValid[cutVal+1:cutVal2,:]), yBinValid[cutVal+1:cutVal2]))
 
-    ### KNOWLEDGE TRANSFER on public unlabelled
-    ypub = global_model.predictAverage(XBinValid[0:cutVal,:], epsilon=0.001)
-    global_kt = linear_model.linRegL2(XBinValid[0:cutVal,:], ypub, lammy=0.1, verbose=0, maxEvals=400)
-    global_kt.fit()
-    print("global-knowledge-transfer e=0.001 Validation error %.3f" % 
-        utils.regression_error(global_kt.predict(
-            XBinValid[cutVal+1:cutVal2,:]), yBinValid[cutVal+1:cutVal2]))
+    # ### KNOWLEDGE TRANSFER on public unlabelled
+    # ypub = global_model.predictAverage(XBinValid[0:cutVal,:], epsilon=0.001)
+    # global_kt = linear_model.linRegL2(XBinValid[0:cutVal,:], ypub, lammy=0.1, verbose=0, maxEvals=400)
+    # global_kt.fit()
+    # print("global-knowledge-transfer e=0.001 Validation error %.3f" % 
+    #     utils.regression_error(global_kt.predict(
+    #         XBinValid[cutVal+1:cutVal2,:]), yBinValid[cutVal+1:cutVal2]))
 
     ## FULL MODEL
     full = linear_model.linRegL2(XBin, yBin, lammy=0.1, maxEvals=400)

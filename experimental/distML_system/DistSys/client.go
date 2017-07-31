@@ -78,20 +78,20 @@ func main() {
 	case "log":
 		logModule = python.PyImport_ImportModule("logistic_model")
 		logInitFunc = logModule.GetAttrString("init")
-		logPrivFunc = logModule.GetAttrString("privateFun")
 		numFeatures = logInitFunc.CallFunction(python.PyString_FromString(dataset))
+		logPrivFunc = logModule.GetAttrString("privateFun")
 
 	case "lin":
 		linModule = python.PyImport_ImportModule("linear_model")
 		linInitFunc = linModule.GetAttrString("init")
-		linPrivFunc = linModule.GetAttrString("privateFun")
 		numFeatures = linInitFunc.CallFunction(python.PyString_FromString(dataset))
+		linPrivFunc = linModule.GetAttrString("privateFun")
 
 	case "linL2":
 		linModule = python.PyImport_ImportModule("linear_model")
 		linInitFunc = linModule.GetAttrString("init")
-		linPrivFunc = linModule.GetAttrString("privateFunL2")
 		numFeatures = linInitFunc.CallFunction(python.PyString_FromString(dataset))
+		linPrivFunc = linModule.GetAttrString("privateFunL2")
 
 	}
 
@@ -161,7 +161,7 @@ func (t *Node) RequestUpdateLog(args Weights, reply *Weights) error {
 
 	//fmt.Println("End of method")
 
-	if curIteration == 20000 {
+	if curIteration == 1000 {
 		fmt.Printf("Go float array -> Python List: %s\n", goFloatsToPyObject)
 		fmt.Printf("go-python function call: %s\n", gopyLatency)
 		fmt.Printf("Python list -> Go float array: %s\n", pyObjectToGoFloats)
@@ -222,6 +222,12 @@ func parseArgs() {
 	var err error
 	if len(inputargs) < 6 {
 		fmt.Printf("Not enough inputs.\n")
+		fmt.Printf("Argument 1: Hospital name.\n")
+		fmt.Printf("Argument 2: Local IP address. Dotted IPv4 notation.\n")
+		fmt.Printf("Argument 3: Server IP address. Dotted IPv4 notation.\n")
+		fmt.Printf("Argument 4: Name of file for GoVector logging.\n")
+		fmt.Printf("Argument 5: Name of dataset file to train on.\n")
+		fmt.Printf("Argument 6: Type of model to be trained. Either \"log\" for logistic regression or \"lin\" for linear regression.\n")
 		return
 	}
 	name = inputargs[0]

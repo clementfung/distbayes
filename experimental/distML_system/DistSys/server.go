@@ -5,10 +5,12 @@ import (
 	"flag"
 	"fmt"
 	"github.com/arcaneiceman/GoVector/govec"
+	"github.com/sbinet/go-python"
 	"net"
 	"net/http"
 	"net/rpc"
 	"os"
+	"time"
 )
 
 const BUFFSIZE = 4096
@@ -55,6 +57,10 @@ func init() {
 }
 
 func main() {
+	sysPath := python.PySys_GetObject("path")
+	python.PyList_Insert(sysPath, 0, python.PyString_FromString("./"))
+	python.PyList_Insert(sysPath, 0, python.PyString_FromString("../ML/code"))
+
 	// Initialize data/parse arguments
 	client = make(map[string]int)
 	claddr = make(map[int]*net.TCPAddr)
@@ -145,8 +151,9 @@ func parseUserInput() {
 		}
 		switch ident {
 		case "train_logistic":
+			start := time.Now()
 			// TODO: This is synch for now. needs to become asynch
-			for i := 1; i <= 20000; i++ {
+			for i := 1; i <= 1000; i++ {
 				fmt.Printf("Iteration %d started.\n", i)
 				for name, id := range client {
 					rpcCaller, err := rpc.DialHTTP("tcp", claddr[id].String())
@@ -173,11 +180,12 @@ func parseUserInput() {
 			}
 
 			fmt.Printf("Global weights (after completion): %v\n", globalW.Array)
+			fmt.Printf("Total latency: %s\n", time.Since(start))
 			fmt.Print("Enter command: ")
 
 		case "train_linear":
+			start := time.Now()
 			// TODO: This is synch for now. needs to become asynch
-
 			for i := 1; i <= 15000; i++ {
 				fmt.Printf("Iteration %d started.\n", i)
 				for name, id := range client {
@@ -203,25 +211,28 @@ func parseUserInput() {
 			}
 
 			fmt.Printf("Global weights (after completion): %v\n", globalW.Array)
+			fmt.Printf("Total latency: %s\n", time.Since(start))
 			fmt.Print("Enter command: ")
 
 		case "test":
 
-			argArray := python.PyList_New(len(globalW))
+			argArray := python.PyList_New(len(globalW.Array))
 
-			for i := 0; i < len(globalW); i++ {
-				python.PyList_SetItem(argArray, i, python.PyFloat_FromDouble(globalW[i]))
+			for i := 0; i < len(globalW.Array); i++ {
+				python.PyList_SetItem(argArray, i, python.PyFloat_FromDouble(globalW.Array[i]))
 			}
 
 			result := testFunc.CallFunction(argArray)
-			err := python.PyLong_AsDouble(result)
+			err := python.PyFloat_AsDouble(result)
 			fmt.Printf("The loss is %f\n", err)
 			fmt.Print("Enter command: ")
 
 		default:
 			fmt.Printf(" Command not recognized: %v.\n\n", ident)
 			fmt.Printf("  Choose from the following commands\n")
-			fmt.Printf("  getNums  -- Pushes weight and prediction to server\n")
+			fmt.Printf("  train_logistic  -- Trains a global logistic model through gradient descent on registered local nodes\n")
+			fmt.Printf("  train_linear  -- Trains a global linear model through gradient descent on registered local nodes\n")
+			fmt.Printf("  test  -- Tests the global model on a test set and reports the test error\n")
 			fmt.Print("Enter command: ")
 		}
 	}
@@ -234,6 +245,9 @@ func parseArgs() {
 	var err error
 	if len(inputargs) < 3 {
 		fmt.Printf("Not enough inputs.\n")
+		fmt.Printf("Argument 1: Local IP address. Dotted IPv4 notation.\n")
+		fmt.Printf("Argument 2: Name of file for GoVector logging.\n")
+		fmt.Printf("Argument 3: Type of model to be trained. Either \"log\" for logistic regression or \"lin\" for linear regression.\n")
 		return
 	}
 	myaddr, err = net.ResolveTCPAddr("tcp", inputargs[0])

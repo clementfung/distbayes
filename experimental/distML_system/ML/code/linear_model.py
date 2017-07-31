@@ -30,7 +30,7 @@ def init(dataset):
     return d
 
 def funObj(ww, X, y):
-    xwy = (X.dot(w) - y)
+    xwy = (X.dot(ww) - y)
     f = 0.5 * xwy.T.dot(xwy)
     g = X.T.dot(xwy)
 

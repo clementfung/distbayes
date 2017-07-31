@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/binary"
+	"flag"
 	"fmt"
 	"math"
 	"os"
@@ -15,6 +16,11 @@ import (
 */
 var ONION_HOST string = "4255ru2izmph3efw.onion:6677"
 var TOR_PROXY string = "127.0.0.1:9150"
+
+var (
+	name string
+	datasetName string
+)
 
 type MessageData struct {
 	Type 	string
@@ -61,13 +67,13 @@ func pyInit(datasetName string) {
 
 func main() {
 
-	name := "client1"
-	logger := govec.InitGoVector(name, "torclientlogfile")
+	parseArgs()
+	logger := govec.InitGoVector(name, name)
 	torDialer := getTorDialer()
 	node.NodeId = name
 
 	// Initialize the python side
-	pyInit("logData1")
+	pyInit(datasetName)
 
   	joined := sendJoinMessage(logger, torDialer)
 
@@ -82,6 +88,18 @@ func main() {
 
   	fmt.Println("The end")
 
+}
+
+func parseArgs() {
+	flag.Parse()
+	inputargs := flag.Args()
+	if len(inputargs) < 2 {
+		fmt.Println("USAGE: go run torclient.go pName datasetName")
+		os.Exit(1)
+	}
+	name = inputargs[0]
+	datasetName = inputargs[1]
+	fmt.Println("Done parsing args.")
 }
 
 func getTorDialer() proxy.Dialer {

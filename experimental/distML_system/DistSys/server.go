@@ -252,7 +252,7 @@ func parseArgs() {
 	}
 	myaddr, err = net.ResolveTCPAddr("tcp", inputargs[0])
 	checkError(err)
-	logger = govec.Initialize(inputargs[1], inputargs[1])
+	logger = govec.InitGoVector(inputargs[1], inputargs[1])
 	modelType = inputargs[2]
 }
 

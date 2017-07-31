@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"github.com/DistributedClocks/GoVector/govec"
+	"github.com/sbinet/go-python"
 )
 
 type MessageData struct {
@@ -25,13 +26,21 @@ var (
 	numFeatures			int = 0
 	myWeights 			[]float64
 	registeredNodes		map[string]string
+
+	// Test Module for python
+	testModule  *python.PyObject
+	testFunc    *python.PyObject
+
 )
 
 func handler(w http.ResponseWriter, r *http.Request) {
     
     fmt.Fprintf(w, "Welcome %s!\n\n", r.URL.Path[1:])
     fmt.Fprintf(w, "Num nodes: %d\n", maxnode)
-    fmt.Fprintf(w, "Weights: %v", myWeights)
+    fmt.Fprintf(w, "Weights: %v\n", myWeights)
+
+    fmt.Fprintf(w, "Current Loss: %f\n", testModel())
+
 }
 
 func httpHandler() {
@@ -41,9 +50,30 @@ func httpHandler() {
 	fmt.Printf("HTTP initialized.\n")
 }
 
+func init() {
+	err := python.Initialize()
+	if err != nil {
+		panic(err.Error())
+	}
+}
+
+func pyInit() {
+
+	sysPath := python.PySys_GetObject("path")
+	python.PyList_Insert(sysPath, 0, python.PyString_FromString("./"))
+	python.PyList_Insert(sysPath, 0, python.PyString_FromString("../ML/code"))
+
+	testModule = python.PyImport_ImportModule("logistic_model_test")
+	testFunc = testModule.GetAttrString("test")
+
+}
+
 func main() {
 
 	fmt.Println("Launching server...")
+
+	pyInit()
+	
 	go httpHandler()
 	go tcpSetup("127.0.0.1:6677")
 
@@ -114,7 +144,18 @@ func tcpSetup(address string) {
 
 }
 
-func trainGlobal() {
+func testModel() float64 {
+
+	argArray := python.PyList_New(len(myWeights))
+
+	for i := 0; i < len(myWeights); i++ {
+		python.PyList_SetItem(argArray, i, python.PyFloat_FromDouble(myWeights[i]))
+	}
+
+	result := testFunc.CallFunction(argArray)
+	err := python.PyFloat_AsDouble(result)
+	
+	return err
 
 }
 

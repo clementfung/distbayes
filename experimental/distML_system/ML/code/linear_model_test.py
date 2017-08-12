@@ -10,5 +10,4 @@ def test(ww):
 	ww = np.array(ww)
 	yhat = np.dot(Xtest, ww)
 	error = 0.5 * np.sum(np.square((ytest - yhat)) / float(yhat.size))
-	print error
 	return error

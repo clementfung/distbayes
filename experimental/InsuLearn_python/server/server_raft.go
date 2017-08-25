@@ -2,12 +2,14 @@ package main
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/gob"
 	"flag"
 	"fmt"
 	"github.com/arcaneiceman/GoVector/govec"
 	"github.com/coreos/etcd/raft"
 	"github.com/coreos/etcd/raft/raftpb"
+	"github.com/sbinet/go-python"
 	"golang.org/x/net/context"
 	"io/ioutil"
 	"math"
@@ -414,7 +416,7 @@ func connHandler(conn *net.TCPConn) {
 			}
 		}
 
-		if notOutdated & mynode.testqueue[mynode.client[msg.NodeName]][mynode.cnumhist[msg.Id]] {
+		if notOutdated && mynode.testqueue[mynode.client[msg.NodeName]][mynode.cnumhist[msg.Id]] {
 			repstate := state{0, msg}
 			flag := replicate(repstate)
 			if flag {
@@ -459,8 +461,8 @@ func updateGlobal(ch chan message) {
 		tempmodel := mynode.tempmodels[id]
 		tempmodel.TotalSize += m.Model.Size
 
-		// TODO: Discuss why we're using += instead of = with Al
-		tempmodel.Errors[mynode.client[m.NodeName]] += m.Model.LocalError
+		// TODO: Discuss why we were using += instead of = before with Al
+		tempmodel.Errors[mynode.client[m.NodeName]] = m.Model.LocalError
 		//tempAggregate.R[mynode.client[m.NodeName]] += m.Model.Weight
 
 		mynode.tempmodels[id] = tempmodel
@@ -474,9 +476,9 @@ func updateGlobal(ch chan message) {
 		if float64(tempmodel.TotalSize) > float64(totalSize)*0.6 {
 			models[id] = tempmodel
 			t := time.Now()
-			logger.LogLocalEvent(fmt.Sprintf("%s - Committed model%v by %v at partial commit %v.", t.Format("15:04:05.0000"), id, mynode.client[m.NodeName], tempAggregate.D/modelD*100.0))
+			logger.LogLocalEvent(fmt.Sprintf("%s - Committed model%v by %v at partial commit %v.", t.Format("15:04:05.0000"), id, mynode.client[m.NodeName], tempmodel.TotalSize/totalSize*100.0))
 			//logger.LogLocalEvent(fmt.Sprintf("%v %v %v", t, id, tempAggregate.d))
-			fmt.Printf("--- Committed model%v for commit number: %v.\n", id, tempAggregate.Cnum)
+			fmt.Printf("--- Committed model%v for commit number: %v.\n", id, tempmodel.CommitNum)
 		}
 	}
 }
@@ -487,27 +489,27 @@ func genGlobalModel() {
 	// Python lists that are passed as arguments to the global model generator function
 	// errors is basically the 2D array which holds the errors for models across different nodes
 	// sizes is basically the array that holds the number of rows that models at the different nodes were originally trained on (basically n at each of the nodes)
-	errors := python.PyList_New(len(client) * len(client))
-	sizes := python.PyList_New(len(client))
+	errors := python.PyList_New(len(mynode.client) * len(mynode.client))
+	sizes := python.PyList_New(len(mynode.client))
 
 	// This temporary slice holds the pickled Python models that are part of the overall global model
 	var modelsSlice []string
 
 	// Ierate over all nodes that joined at some point
-	for i := 0; i < nodeNum; i++ {
+	for i := 0; i < mynode.nodeNum; i++ {
 		// Checks to see if there is a committed model (which has been validated sufficiently) for the current node
 		if currModel, ok := models[i]; ok {
 
 			// If there is such a model, the pickled string is appended to the temp slice and the size is appended to one of our Python argument lists
-			modelsSlice = append(modelsSlice, currModel.model)
-			python.PyList_SetItem(sizes, i, python.PyFloat_FromDouble(currModel.trainSize))
+			modelsSlice = append(modelsSlice, currModel.Model)
+			python.PyList_SetItem(sizes, i, python.PyFloat_FromDouble(currModel.TrainSize))
 
 			// Iterate over the errors of each model across different nodes and adds those errors to one of our Python argument lists, adds negative inifinity if no error is found
-			for j := 0; j < nodeNum; j++ {
-				if currError, valid := currModel.errors[j]; valid {
-					python.PyList_SetItem(errors, i*len(client)+j, python.PyFloat_FromDouble(currError))
+			for j := 0; j < mynode.nodeNum; j++ {
+				if currError, valid := currModel.Errors[j]; valid {
+					python.PyList_SetItem(errors, i*len(mynode.client)+j, python.PyFloat_FromDouble(currError))
 				} else {
-					python.PyList_SetItem(errors, i*len(client)+j, python.PyFloat_FromDouble(math.Inf(-1)))
+					python.PyList_SetItem(errors, i*len(mynode.client)+j, python.PyFloat_FromDouble(math.Inf(-1)))
 				}
 			}
 
@@ -616,7 +618,7 @@ func processJoin(m message) bool {
 		flag = replicate(repstate)
 		if flag {
 			for _, v := range mynode.tempmodels {
-				sendTestRequest(m.NodeName, mynode.client[m.NodeName], v.CommitNum, v.Model)
+				sendTestRequest(m.NodeName, mynode.client[m.NodeName], v.CommitNum, ILModel{v.Model, 0.0, 0.0})
 			}
 		}
 	} else {
@@ -628,8 +630,7 @@ func processJoin(m message) bool {
 			//time.Sleep(time.Duration(2 * time.Second))
 			for k, v := range mynode.testqueue[id] {
 				if v {
-					aggregate := mynode.tempmodels[k]
-					sendTestRequest(m.NodeName, id, aggregate.CommitNum, aggregate.Model)
+					sendTestRequest(m.NodeName, id, mynode.tempmodels[k].CommitNum, ILModel{mynode.tempmodels[k].Model, 0.0, 0.0})
 				}
 			}
 		}
@@ -649,7 +650,7 @@ func parseArgs() {
 	}
 	myaddr, err = net.ResolveTCPAddr("tcp", inputargs[0])
 	checkError(err)
-	logger = govec.Initialize(inputargs[3], inputargs[3])
+	logger = govec.InitGoVector(inputargs[3], inputargs[3])
 	getNodeAddr(inputargs[1])
 	temp, _ := strconv.ParseInt(inputargs[2], 10, 64)
 	nID = int(temp)
@@ -671,4 +672,22 @@ func checkError(err error) {
 		fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
 		//os.Exit(1)
 	}
+}
+
+// Helper function that converts a python array of floats to a golang array of floats
+func pyFloatArrayToGoFloatArray(pyFloats *python.PyObject) []float64 {
+	pyFloatsByteArray := python.PyByteArray_FromObject(pyFloats)
+	goFloatsByteArray := python.PyByteArray_AsBytes(pyFloatsByteArray)
+
+	var goFloats []float64
+	size := len(goFloatsByteArray) / 8
+
+	for i := 0; i < size; i++ {
+		currIndex := i * 8
+		bits := binary.LittleEndian.Uint64(goFloatsByteArray[currIndex : currIndex+8])
+		float := math.Float64frombits(bits)
+		goFloats = append(goFloats, float)
+	}
+
+	return goFloats
 }

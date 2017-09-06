@@ -30,16 +30,23 @@ var (
 	// Test Module for python
 	testModule  *python.PyObject
 	testFunc    *python.PyObject
+	trainFunc    *python.PyObject
 
 )
 
 func handler(w http.ResponseWriter, r *http.Request) {
+
+	req := r.URL.Path[1:]
     
     fmt.Fprintf(w, "Welcome %s!\n\n", r.URL.Path[1:])
     fmt.Fprintf(w, "Num nodes: %d\n", maxnode)
     fmt.Fprintf(w, "Weights: %v\n", myWeights)
 
-    fmt.Fprintf(w, "Current Loss: %f\n", testModel())
+    if req == "test" {
+    	train_error, test_error := testModel()
+    	fmt.Fprintf(w, "Train Loss: %f\n", train_error)	
+    	fmt.Fprintf(w, "Test Loss: %f\n", test_error)	
+    }
 
 }
 
@@ -64,7 +71,8 @@ func pyInit() {
 	python.PyList_Insert(sysPath, 0, python.PyString_FromString("../ML/code"))
 
 	testModule = python.PyImport_ImportModule("logistic_model_test")
-	testFunc = testModule.GetAttrString("test")
+	trainFunc = testModule.GetAttrString("train_error")
+	testFunc = testModule.GetAttrString("test_error")
 
 }
 
@@ -75,7 +83,7 @@ func main() {
 	pyInit()
 	
 	go httpHandler()
-	go tcpSetup("127.0.0.1:6677")
+	go tcpSetup("127.0.0.1:5005")
 
     // Keeps server running
 	select {}
@@ -93,12 +101,13 @@ func tcpSetup(address string) {
 	ln, err := net.ListenTCP("tcp", myaddr)
 	checkError(err)
 
-	fmt.Printf("Listening for TCP....\n")
-	buf := make([]byte, 512)
-	outBuf := make([]byte, 512)
+	buf := make([]byte, 2048)
+	outBuf := make([]byte, 2048)
 	registeredNodes = make(map[string]string)
 
 	for {
+
+		fmt.Printf("Listening for TCP....\n")
 
 		conn, err := ln.Accept()
 		checkError(err)
@@ -110,13 +119,16 @@ func tcpSetup(address string) {
 
 		var incomingData MessageData
 		Logger.UnpackReceive("Received Message From Client", buf[0:], &incomingData)
-		fmt.Printf("Received %v\n", incomingData)
-
+	
 		var ok bool
 
 		switch incomingData.Type {
 			
-			// A gradient update
+			// Client requests copy of model, return myWeights
+			case "req":
+				outBuf = Logger.PrepareSend("Replying", myWeights)
+
+			// Client is sending a gradient update. Apply it and return myWeights
 			case "grad":
 				ok = gradUpdate(incomingData.Node.NodeId, incomingData.Deltas)
 				outBuf = Logger.PrepareSend("Replying", myWeights)
@@ -132,19 +144,25 @@ func tcpSetup(address string) {
 					outBuf = Logger.PrepareSend("Replying", 0)
 				}
 
+			case "beat":
+
+				fmt.Printf("Heartbeat from %s\n", incomingData.Node)
+				outBuf = Logger.PrepareSend("Replying to heartbeat", 1)
+
 			default:
 				ok = false
 				outBuf = nil
+				
 		}
 
 	  	conn.Write(outBuf)
-		fmt.Printf("State %v\n", myWeights)
+		fmt.Printf("Done processing data from %s\n", incomingData.Node.NodeId)
 
 	}
 
 }
 
-func testModel() float64 {
+func testModel() (float64, float64) {
 
 	argArray := python.PyList_New(len(myWeights))
 
@@ -152,10 +170,13 @@ func testModel() float64 {
 		python.PyList_SetItem(argArray, i, python.PyFloat_FromDouble(myWeights[i]))
 	}
 
-	result := testFunc.CallFunction(argArray)
-	err := python.PyFloat_AsDouble(result)
+	test_result := testFunc.CallFunction(argArray)
+	test_err := python.PyFloat_AsDouble(test_result)
+
+	train_result := trainFunc.CallFunction(argArray)
+	train_err := python.PyFloat_AsDouble(train_result)
 	
-	return err
+	return train_err, test_err
 
 }
 
@@ -195,6 +216,8 @@ func gradUpdate(nodeId string, deltas []float64) bool {
 
 	_, exists := registeredNodes[nodeId]
 	
+	//fmt.Printf("Deltas: %v", deltas)
+
 	if exists { 
 		// Add in the deltas
 		for j := 0; j < len(deltas); j++ {

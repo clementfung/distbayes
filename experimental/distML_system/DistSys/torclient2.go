@@ -5,7 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"math"
+	"net"
 	"os"
+	"time"
 	"golang.org/x/net/proxy"
 	"github.com/DistributedClocks/GoVector/govec"
 	"github.com/sbinet/go-python"
@@ -14,12 +16,14 @@ import (
 /*
 	An attempt at Tor via TCP. 
 */
-var ONION_HOST string = "4255ru2izmph3efw.onion:6677"
+var LOCAL_HOST string = "127.0.0.1:5005"
+var ONION_HOST string = "4255ru2izmph3efw.onion:5005"
 var TOR_PROXY string = "127.0.0.1:9150"
 
 var (
 	name string
 	datasetName string
+	isLocal bool
 )
 
 type MessageData struct {
@@ -75,6 +79,7 @@ func main() {
 	// Initialize the python side
 	pyInit(datasetName)
 
+	fmt.Println("Sending join...")
   	joined := sendJoinMessage(logger, torDialer)
 
   	if joined == 0 {
@@ -82,11 +87,58 @@ func main() {
   		return
   	}
 
-  	for i := 0; i < 200; i++ { 
-    	sendGradMessage(logger, torDialer, pulledGradient)
+  	sendGradMessage(logger, torDialer, pulledGradient, true)
+
+  	for i := 0; i < 20000; i++ { 
+    	sendGradMessage(logger, torDialer, pulledGradient, false)
   	}
 
+  	heartbeat(logger, torDialer)
   	fmt.Println("The end")
+
+}
+
+func heartbeat(logger *govec.GoLog, torDialer proxy.Dialer) {
+
+	for {
+
+		time.Sleep(30 * time.Second)		
+
+		conn, err := getServerConnection(torDialer)
+		if err != nil {
+			fmt.Println("Got a Dial failure, retrying...")
+			continue
+		}
+
+		var msg MessageData
+		msg.Type = "beat"
+		msg.Node = node
+		msg.Deltas = nil
+
+		outBuf := logger.PrepareSend("Sending packet to torserver", msg)
+		
+		_, err = conn.Write(outBuf)
+		if err != nil {
+			fmt.Println("Got a Conn Write failure, retrying...")
+			conn.Close()
+			continue
+		}
+		
+		inBuf := make([]byte, 512)
+		n, errRead := conn.Read(inBuf)
+		if errRead != nil {
+			fmt.Println("Got a Conn Read failure, retrying...")
+			conn.Close()
+			continue
+		}
+
+		var reply int
+		logger.UnpackReceive("Received Message from server", inBuf[0:n], &reply)
+
+		fmt.Println("Send heartbeat success")
+		conn.Close()
+
+	}	
 
 }
 
@@ -99,59 +151,113 @@ func parseArgs() {
 	}
 	name = inputargs[0]
 	datasetName = inputargs[1]
+
+	if len(inputargs) > 2 {
+		fmt.Println("Running locally.")
+		isLocal = true
+	}
+
 	fmt.Println("Done parsing args.")
 }
 
 func getTorDialer() proxy.Dialer {
 
+	if isLocal {
+		return nil
+	}
+
 	// Create proxy dialer using Tor SOCKS proxy
-	fmt.Println("Trying 9150")
 	torDialer, err := proxy.SOCKS5("tcp", TOR_PROXY, nil, proxy.Direct)
 	checkError(err)
-
-	fmt.Println("SOCKS5 Dial success!")
 	return torDialer
 
 }
 
-func sendGradMessage(logger *govec.GoLog, torDialer proxy.Dialer, globalW []float64) int {
+func sendGradMessage(logger *govec.GoLog, 
+	torDialer proxy.Dialer, 
+	globalW []float64, 
+	bootstrapping bool) int {
 	
-	// Connect to the server via Tor
-	conn, err := torDialer.Dial("tcp", ONION_HOST)
-	checkError(err)
+	completed := false
+	time.Sleep(10 * time.Millisecond)		
 
-	var msg MessageData
-	msg.Type = "grad"
-	msg.Node = node
-	msg.Deltas, err = oneGradientStep(globalW)
-	checkError(err)
+	for !completed {
 
-	outBuf := logger.PrepareSend("Sending packet to torserver", msg)
-	
-	_, err = conn.Write(outBuf)
-	checkError(err)
-	
-	inBuf := make([]byte, 512)
-	n, errRead := conn.Read(inBuf)
-	checkError(errRead)
+		conn, err := getServerConnection(torDialer)
+		if err != nil {
+			fmt.Println("Got a Dial failure, retrying...")
+			continue
+		}
 
-	var incomingMsg []float64
-	logger.UnpackReceive("Received Message from server", inBuf[0:n], &incomingMsg)
+		var msg MessageData
+		if !bootstrapping {
+			msg.Type = "grad"
+			msg.Node = node
+			msg.Deltas, err = oneGradientStep(globalW)
 
-	conn.Close()
+			if err != nil {
+				fmt.Println("Got a GoPython failure, retrying...")
+				conn.Close()
+				continue
+			}
+		} else {
+			msg.Type = "req"
+			msg.Node = node
+			msg.Deltas = nil
+		}
 
-	pulledGradient = incomingMsg
+		outBuf := logger.PrepareSend("Sending packet to torserver", msg)
+		
+		_, err = conn.Write(outBuf)
+		if err != nil {
+			fmt.Println("Got a conn write failure, retrying...")
+			conn.Close()
+			continue
+		}
+		
+		inBuf := make([]byte, 2048)
+		n, errRead := conn.Read(inBuf)
+		if errRead != nil {
+			fmt.Println("Got a reply read failure, retrying...")
+			conn.Close()
+			continue
+		}
+
+		var incomingMsg []float64
+		logger.UnpackReceive("Received Message from server", inBuf[0:n], &incomingMsg)
+
+		conn.Close()
+
+		pulledGradient = incomingMsg
+		completed = true
+
+	}
+
 	return 1
+
+}
+
+func getServerConnection(torDialer proxy.Dialer) (net.Conn, error) {
+
+	var conn net.Conn
+	var err error
+
+	if torDialer != nil {
+		conn, err = torDialer.Dial("tcp", ONION_HOST)
+	} else {
+		conn, err = net.Dial("tcp", LOCAL_HOST)
+	}
+
+	return conn, err
 
 }
 
 func sendJoinMessage(logger *govec.GoLog, torDialer proxy.Dialer) int {
 
-	conn, err := torDialer.Dial("tcp", ONION_HOST)
-  	checkError(err)
+	conn, err := getServerConnection(torDialer)
+	checkError(err)
 
-  	fmt.Println("TOR Dial Success!")
-	fmt.Println("Sending Join")
+	fmt.Println("TOR Dial Success!")
 
 	var msg MessageData
     msg.Type = "join"
@@ -184,7 +290,7 @@ func oneGradientStep(globalW []float64) ([]float64, error) {
 		python.PyList_SetItem(argArray, i, python.PyFloat_FromDouble(globalW[i]))
 	}
 
-	result := logPrivFunc.CallFunction(python.PyInt_FromLong(1), argArray)
+	result := logPrivFunc.CallFunction(python.PyInt_FromLong(1), argArray, python.PyInt_FromLong(5))
 	
 	// Convert the resulting array to a go byte array
 	pyByteArray := python.PyByteArray_FromObject(result)

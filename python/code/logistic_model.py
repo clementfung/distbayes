@@ -16,7 +16,6 @@ class logReg:
         self.y = y
         self.init_alpha = 1e-2
         self.alpha = self.init_alpha
-        self.iter = 1
 
         n, self.d = self.X.shape
         self.w = np.zeros(self.d)
@@ -41,7 +40,6 @@ class logReg:
         # Define constants and params
         nn, dd = self.X.shape
         threshold = int(self.d * theta)
-        self.iter = self.iter + 1
 
         if batch_size > 0 and batch_size < nn:
             idx = np.random.choice(nn, batch_size, replace=False)
@@ -56,12 +54,12 @@ class logReg:
         ada_grad = g / (1e-6 + np.sqrt(self.hist_grad))
 
         # Determine the actual step magnitude
-        delta = -self.alpha * ada_grad
+        delta = -self.init_alpha * ada_grad
 
         # Weird way to get NON top k values
         if theta < 1:
-            param_filter = np.argpartition(
-                abs(delta), -threshold)[:self.d - threshold]
+            param_filter = np.argpartition(abs(delta),
+                                           -threshold)[:self.d - threshold]
             delta[param_filter] = 0
 
         w_new = ww + delta
@@ -77,25 +75,25 @@ class logReg:
         idx = np.random.choice(nn, batch_size, replace=False)
 
         # indicator. if expression is less than zero, we keep the delta.
-        indic = (self.X[idx,:].dot(ww) * self.y[idx] < 1).astype(int)
+        indic = (self.X[idx, :].dot(ww) * self.y[idx] < 1).astype(int)
 
         # delta. remove all examples with indic first.
-        grad = (indic * self.y[idx]).dot(self.X[idx,:])
+        grad = (indic * self.y[idx]).dot(self.X[idx, :])
         delta = grad / batch_size
 
         return delta
 
     def sgd_fit(self, theta, batch_size=0, *args):
 
-        print "Training model."
+        print "Training model via SGD."
 
         # Parameters of the Optimization
-        optTol = 1e-4
-        i = 0
+        optTol = 1e-2
         n, d = self.X.shape
 
         # Initial guess
         self.w = np.zeros(d)
+        self.hist_grad = 0
         funEvals = 1
 
         while True:
@@ -129,6 +127,8 @@ class logReg:
         print "Done fitting."
 
     def fit(self):
+
+        print "Normal Fit."
 
         (self.w, self.alpha, f, _) = minimizers.findMin(self.funObj, self.w, self.alpha,
                                                         self.maxEvals,
@@ -275,12 +275,13 @@ class logRegL0(logReg):
     def fitSelected(self, selected):
         n, d = self.X.shape
         w0 = np.zeros(self.d)
-        minimize = lambda ind: minimizers.findMin(self.funObj,
-                                                  w0[ind],
-                                                  self.alpha,
-                                                  self.maxEvals,
-                                                  self.verbose,
-                                                  self.X[:, ind], self.y)
+
+        def minimize(ind): return minimizers.findMin(self.funObj,
+                                                     w0[ind],
+                                                     self.alpha,
+                                                     self.maxEvals,
+                                                     self.verbose,
+                                                     self.X[:, ind], self.y)
 
         # re-train the model one last time using the selected features
         self.w = w0
@@ -289,12 +290,13 @@ class logRegL0(logReg):
     def fit(self):
         n, d = self.X.shape
         w0 = np.zeros(self.d)
-        minimize = lambda ind: minimizers.findMin(self.funObj,
-                                                  w0[ind],
-                                                  self.alpha,
-                                                  self.maxEvals,
-                                                  self.verbose,
-                                                  self.X[:, ind], self.y)
+
+        def minimize(ind): return minimizers.findMin(self.funObj,
+                                                     w0[ind],
+                                                     self.alpha,
+                                                     self.maxEvals,
+                                                     self.verbose,
+                                                     self.X[:, ind], self.y)
         selected = set()
         selected.add(0)  # always include the bias variable
         minLoss = np.inf

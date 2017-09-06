@@ -1,6 +1,4 @@
 from __future__ import division
-import sys
-import argparse
 import utils
 import logistic_model
 import global_model
@@ -75,10 +73,12 @@ if __name__ == "__main__":
     global_model_gd.add_model(model5)
 
     global_model_gd.fit(theta=1)
-    print("global 1 Training error %.3f" %
+    print("global 1 GD Training error %.3f" %
           utils.classification_error(global_model_gd.predict(XBin), yBin))
-    print("global 1 Validation error %.3f" %
+    print("global 1 GD Validation error %.3f" %
           utils.classification_error(global_model_gd.predict(XBinValid), yBinValid))
+
+    pdb.set_trace()
 
     # GLOBAL MODEL with SGD
     global_model_sgd = global_model.globalModel(

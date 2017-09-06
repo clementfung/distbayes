@@ -7,18 +7,20 @@ from numpy.linalg import norm
 import pandas as pd
 import pdb
 
+
 def sliceupLinear(numSplits):
-    slices = pd.read_csv(os.path.join('..', "data", 'slice_localization_data.csv'))
+    slices = pd.read_csv(os.path.join(
+        '..', "data", 'slice_localization_data.csv'))
     n, d = slices.shape
 
-    npslices = slices.ix[np.random.permutation(n),:].as_matrix()
+    npslices = slices.ix[np.random.permutation(n), :].as_matrix()
     split = int(n * 0.70)
 
-    X = npslices[0:split, 1:d-1]
+    X = npslices[0:split, 1:d - 1]
     y = npslices[0:split, -1]
 
-    Xvalid = npslices[(split+1):n, 1:d-1]
-    yvalid = npslices[(split+1):n, -1]
+    Xvalid = npslices[(split + 1):n, 1:d - 1]
+    yvalid = npslices[(split + 1):n, -1]
 
     X, mu, sigma = standardize_cols(X)
     Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
@@ -34,6 +36,7 @@ def sliceupLinear(numSplits):
 
     sliceup(numSplits, X, y, "linData")
 
+
 def sliceupLogistic(numSplits):
 
     data = load_pkl(os.path.join('..', "data", 'logisticData.pkl'))
@@ -48,9 +51,13 @@ def sliceupLogistic(numSplits):
     Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
 
     data = np.hstack((Xvalid, yvalid.reshape((Xvalid.shape[0], 1))))
+
+    pdb.set_trace()
+
     np.savetxt("../data/logTest.csv", data, delimiter=',')
 
     sliceup(numSplits, X, y, "logData")
+
 
 def sliceup(numSplits, X, y, dataset):
 
@@ -62,23 +69,27 @@ def sliceup(numSplits, X, y, dataset):
         numRows = int(X.shape[0] / numSplits)
 
         for i in range(numSplits):
-            data = np.hstack((X[(i * numRows):((i + 1) * numRows), :], y[(i * numRows):((i + 1) * numRows)].reshape((numRows, 1))))
-            np.savetxt("../data/" + dataset + str(i + 1) + ".csv", data, delimiter=",")
+            data = np.hstack((X[(i * numRows):((i + 1) * numRows), :],
+                              y[(i * numRows):((i + 1) * numRows)].reshape((numRows, 1))))
+            np.savetxt("../data/" + dataset + str(i + 1) +
+                       ".csv", data, delimiter=",")
+
 
 def load_dataset(dataset_name):
 
     # Load and standardize the data and add the bias term
     if dataset_name == "logisticData":
-        #data = load_pkl(os.path.join('..', "data", 'logisticData.pkl'))
-        data = load_pkl(os.path.join('..', "data", 'logisticData.pkl')) # Made change here
-        
+        # data = load_pkl(os.path.join('..', "data", 'logisticData.pkl'))
+        # Made change here
+        data = load_pkl(os.path.join('../ML', "data", 'logisticData.pkl'))
+
         X, y = data['X'], data['y']
         Xvalid, yvalid = data['Xvalidate'], data['yvalidate']
-    
+
         n, _ = X.shape
 
         randseed = np.random.permutation(n)
-        X = X[randseed,:]
+        X = X[randseed, :]
         y = y[randseed]
 
         X, mu, sigma = standardize_cols(X)
@@ -87,29 +98,27 @@ def load_dataset(dataset_name):
         X = np.hstack([np.ones((X.shape[0], 1)), X])
         Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
 
-        return {"X":X, "y":y, 
-                "Xvalid":Xvalid, 
-                "yvalid":yvalid}
+        return {"X": X, "y": y,
+                "Xvalid": Xvalid,
+                "yvalid": yvalid}
 
     elif dataset_name == "slices":
 
-        slices = pd.read_csv(os.path.join('../ML', "data", 'slice_localization_data.csv'))
+        slices = pd.read_csv(os.path.join(
+            '../ML', "data", 'slice_localization_data.csv'))
         n, d = slices.shape
 
-        npslices = slices.ix[np.random.permutation(n),:].as_matrix()
+        npslices = slices.ix[np.random.permutation(n), :].as_matrix()
         split = int(n * 0.70)
 
-        X = npslices[0:split, 1:d-1]
+        X = npslices[0:split, 0:d - 1]
         y = npslices[0:split, -1]
 
-        Xvalid = npslices[(split+1):n, 1:d-1]
-        yvalid = npslices[(split+1):n, -1]
+        Xvalid = npslices[(split + 1):n, 0:d - 1]
+        yvalid = npslices[(split + 1):n, -1]
 
         X, mu, sigma = standardize_cols(X)
         Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
-
-        #y, mu_y, sigma_y = standardize_outputs(y)
-        #yvalid, _, _ = standardize_outputs(yvalid, mu_y, sigma_y)
 
         X = np.hstack([np.ones((X.shape[0], 1)), X])
         Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
@@ -117,28 +126,27 @@ def load_dataset(dataset_name):
         X = normalize_rows(X)
         Xvalid = normalize_rows(Xvalid)
 
-        return {"X":X, "y":y, 
-                "Xvalid":Xvalid, 
-                "yvalid":yvalid}
-
-
+        return {"X": X, "y": y,
+                "Xvalid": Xvalid,
+                "yvalid": yvalid}
 
     elif dataset_name == "magic":
 
         magic = pd.read_csv(os.path.join('..', "data", 'magic04.data'))
         nn, dd = magic.shape
 
-        y = magic.ix[:,dd-1].as_matrix()
+        y = magic.ix[:, dd - 1].as_matrix()
         y[np.where(y == 'g')] = 1
         y[np.where(y == 'h')] = -1
 
-        npmagic = magic.ix[np.random.permutation(nn),:].as_matrix().astype(int)
+        npmagic = magic.ix[np.random.permutation(
+            nn), :].as_matrix().astype(int)
         split = int(nn * 0.70)
 
-        X = npmagic[0:split-1, 0:dd-2]
-        y = npmagic[0:split-1, dd-1]
-        Xvalid = npmagic[split:nn-1, 0:dd-2]
-        yvalid = npmagic[split:nn-1, dd-1]
+        X = npmagic[0:split - 1, 0:dd - 2]
+        y = npmagic[0:split - 1, dd - 1]
+        Xvalid = npmagic[split:nn - 1, 0:dd - 2]
+        yvalid = npmagic[split:nn - 1, dd - 1]
 
         X, mu, sigma = standardize_cols(X)
         Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
@@ -149,22 +157,22 @@ def load_dataset(dataset_name):
         X = normalize_rows(X)
         Xvalid = normalize_rows(Xvalid)
 
-        return {"X":X, "y":y, 
-                "Xvalid":Xvalid, 
-                "yvalid":yvalid}
+        return {"X": X, "y": y,
+                "Xvalid": Xvalid,
+                "yvalid": yvalid}
 
     elif dataset_name == "sns":
 
         sns = pd.read_csv(os.path.join('..', 'data', 'sns.txt'), sep="\t")
         nn, dd = sns.shape
 
-        npsns = sns.ix[np.random.permutation(nn),:].as_matrix().astype(int)
+        npsns = sns.ix[np.random.permutation(nn), :].as_matrix().astype(int)
         split = int(nn * 0.70)
 
-        X = npsns[0:split-1, 0:dd-2]
-        y = ((npsns[0:split-1, dd-1] - 1.5) * 2).astype(int)
-        Xvalid = npsns[split:nn-1, 0:dd-2]
-        yvalid = ((npsns[split:nn-1, dd-1] - 1.5) * 2).astype(int)
+        X = npsns[0:split - 1, 0:dd - 2]
+        y = ((npsns[0:split - 1, dd - 1] - 1.5) * 2).astype(int)
+        Xvalid = npsns[split:nn - 1, 0:dd - 2]
+        yvalid = ((npsns[split:nn - 1, dd - 1] - 1.5) * 2).astype(int)
 
         X, mu, sigma = standardize_cols(X)
         Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
@@ -175,120 +183,33 @@ def load_dataset(dataset_name):
         X = normalize_rows(X)
         Xvalid = normalize_rows(Xvalid)
 
-        return {"X":X, "y":y, 
-                "Xvalid":Xvalid, 
-                "yvalid":yvalid}
+        return {"X": X, "y": y,
+                "Xvalid": Xvalid,
+                "yvalid": yvalid}
 
     else:
         data = pd.read_csv(os.path.join('../ML', "data", dataset_name + '.csv'))
+        #data = pd.read_csv(os.path.join('../data', dataset_name + '.csv'))
 
         d = data.shape[1]
 
         data = data.as_matrix()
 
-        X = data[:, 1:d-1]
+        X = data[:, 0:d - 1]
         y = data[:, -1]
 
-        return {"X":X, "y":y}
-
-    """elif dataset_name == "logData1":
-        #data = load_pkl(os.path.join('..', "data", 'logisticData.pkl'))
-        data = pd.read_csv(os.path.join('../ML', "data", 'logData1.csv')) # Made change here
-
-        d = data.shape[1]
-
-        data = data.as_matrix()
-
-        X = data[:,1:d-1]
-        y = data[:,-1]
-
-        X, mu, sigma = standardize_cols(X)
-
-        X = np.hstack([np.ones((X.shape[0], 1)), X])
-
-        return {"X":X, "y":y}
-
-    elif dataset_name == "logData2":
-        #data = load_pkl(os.path.join('..', "data", 'logisticData.pkl'))
-        data = pd.read_csv(os.path.join('../ML', "data", 'logData2.csv')) # Made change here
-
-        d = data.shape[1]
-
-        data = data.as_matrix()
-
-        X = data[:,1:d-1]
-        y = data[:,-1]
-
-        X, mu, sigma = standardize_cols(X)
-
-        X = np.hstack([np.ones((X.shape[0], 1)), X])
-
-        return {"X":X, "y":y}
-
-    elif dataset_name == "logData3":
-        #data = load_pkl(os.path.join('..', "data", 'logisticData.pkl'))
-        data = pd.read_csv(os.path.join('../ML', "data", 'logData3.csv')) # Made change here
-
-        d = data.shape[1]
-
-        data = data.as_matrix()
-
-        X = data[:,1:d-1]
-        y = data[:,-1]
-
-        X, mu, sigma = standardize_cols(X)
-
-        X = np.hstack([np.ones((X.shape[0], 1)), X])
-
-        return {"X":X, "y":y}
-
-    elif dataset_name == "logData4":
-        #data = load_pkl(os.path.join('..', "data", 'logisticData.pkl'))
-        data = pd.read_csv(os.path.join('../ML', "data", 'logData4.csv')) # Made change here
-
-        d = data.shape[1]
-
-        data = data.as_matrix()
-
-        X = data[:,1:d-1]
-        y = data[:,-1]
-
-        X, mu, sigma = standardize_cols(X)
-
-        X = np.hstack([np.ones((X.shape[0], 1)), X])
-
-        return {"X":X, "y":y}
-
-    elif dataset_name == "logData5":
-        #data = load_pkl(os.path.join('..', "data", 'logisticData.pkl'))
-        data = pd.read_csv(os.path.join('../ML', "data", 'logData5.csv')) # Made change here
-
-        d = data.shape[1]
-
-        data = data.as_matrix()
-
-        X = data[:,1:d-1]
-        y = data[:,-1]
-
-        X, mu, sigma = standardize_cols(X)
-
-        X = np.hstack([np.ones((X.shape[0], 1)), X])
-
-        return {"X":X, "y":y}"""
-
-
-
-
+        return {"X": X, "y": y}
 
 def normalize_rows(X):
 
     # Sets all rows to have L2 norm of 1. Needed for diff priv
     nn, dd = X.shape
-    
+
     for i in xrange(nn):
-        X[i,] = X[i,] / norm(X[i,], 2)
+        X[i, ] = X[i, ] / norm(X[i, ], 2)
 
     return X
+
 
 def standardize_cols(X, mu=None, sigma=None):
     # Standardize each column with mean 0 and variance 1
@@ -302,16 +223,17 @@ def standardize_cols(X, mu=None, sigma=None):
         sigma[sigma < 1e-8] = 1.
 
     return (X - mu) / sigma, mu, sigma
-    
+
+
 def standardize_outputs(y, mu=None, sigma=None):
 
-    if mu is None: 
+    if mu is None:
         mu = np.mean(y)
 
     if sigma is None:
         sigma = np.std(y)
         if sigma < 1e-8:
-            sigma = 1.            
+            sigma = 1.
 
     return (y - mu) / sigma, mu, sigma
 
@@ -323,22 +245,25 @@ def check_gradient(model, X, y):
 
     # Check the gradient
     estimated_gradient = approx_fprime(w,
-                                       lambda w: model.funObj(w,X,y)[0], 
+                                       lambda w: model.funObj(w, X, y)[0],
                                        epsilon=1e-6)
 
     implemented_gradient = model.funObj(w, X, y)[1]
-    
+
     if np.max(np.abs(estimated_gradient - implemented_gradient) > 1e-4):
-        raise Exception('User and numerical derivatives differ:\n%s\n%s' % 
-             (estimated_gradient[:5], implemented_gradient[:5]))
+        raise Exception('User and numerical derivatives differ:\n%s\n%s' %
+                        (estimated_gradient[:5], implemented_gradient[:5]))
     else:
         print('User and numerical derivatives agree.')
+
 
 def lap_noise(loc=0, scale=1, size=1):
     return np.random.laplace(loc=loc, scale=scale, size=size)
 
+
 def exp_noise(scale=1, size=1):
     return np.random.exponential(scale=scale, size=size)
+
 
 def approx_fprime(x, f_func, epsilon=1e-7):
     # Approximate the gradient using the complex step method
@@ -353,11 +278,14 @@ def approx_fprime(x, f_func, epsilon=1e-7):
 
     return gA
 
+
 def regression_error(y, yhat):
     return 0.5 * np.sum(np.square((y - yhat)) / float(yhat.size))
 
+
 def classification_error(y, yhat):
-    return np.sum(y!=yhat) / float(yhat.size)
+    return np.sum(y != yhat) / float(yhat.size)
+
 
 def load_pkl(fname):
     """Reads a pkl file.

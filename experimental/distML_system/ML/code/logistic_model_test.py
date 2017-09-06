@@ -3,11 +3,22 @@ import numpy as np
 import utils
 import pdb
 
-Xtest = utils.load_dataset('logTest')['X']
-ytest = utils.load_dataset('logTest')['y']
+data = utils.load_dataset("logTest")
+Xtest, ytest = data['X'], data['y']
 
-def test(ww):
-	ww = np.array(ww)
-	yhat = np.sign(np.dot(Xtest, ww))
-	error = np.sum(yhat!=ytest) / float(yhat.size)
-	return error
+data = utils.load_dataset("logisticData")
+XBin, yBin = data['X'], data['y']
+
+
+def train_error(ww):
+    ww = np.array(ww)
+    yhat = np.sign(np.dot(XBin, ww))
+    error = np.sum(yhat != yBin) / float(yBin.size)
+    return error
+
+
+def test_error(ww):
+    ww = np.array(ww)
+    yhat = np.sign(np.dot(Xtest, ww))
+    error = np.sum(yhat != ytest) / float(yhat.size)
+    return error

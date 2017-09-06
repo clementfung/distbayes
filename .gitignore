@@ -31,3 +31,8 @@ _testmain.go
 # Log Files
 *.pyc
 *-Log.txt
+
+# Python Files
+python/local
+python/bin
+python/pip-selfcheck.json

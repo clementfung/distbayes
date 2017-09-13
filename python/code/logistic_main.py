@@ -78,8 +78,6 @@ if __name__ == "__main__":
     print("global 1 GD Validation error %.3f" %
           utils.classification_error(global_model_gd.predict(XBinValid), yBinValid))
 
-    pdb.set_trace()
-
     # GLOBAL MODEL with SGD
     global_model_sgd = global_model.globalModel(
         logistic=True, verbose=0, maxEvals=100000)
